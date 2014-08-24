@@ -4,7 +4,7 @@ import json
 import sys
 import re
 
-from . import tokenizer
+from . import lexer
 
 
 DEBUG = False
