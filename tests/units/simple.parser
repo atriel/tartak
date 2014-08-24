@@ -1,2 +1,0 @@
-number: "-"? digit
-assignment: name assignment-oper number

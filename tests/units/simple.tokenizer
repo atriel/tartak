@@ -1,8 +1,0 @@
-regex: digit: "[0-9]+"
-
-regex: name: "[a-zA-Z_]+"
-
-string: assignment-oper: "="
-
-# eos -- end of statement
-string: eos: ";"
