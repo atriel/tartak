@@ -11,12 +11,37 @@ DEBUG = False
 class Token:
     """Simple token object.
     """
-    def __init__(self, line, pos, value):
-        self._line, self._pos = 0, 0
+    def __init__(self, line, char, t_type, value, t_group=''):
+        self._line, self._char = 0, 0
+        self._group, self._type = t_group, t_type
         self._value = value
 
+    def __str__(self):
+        return self._value
 
-class Tokenizer:
+    def __repr__(self):
+        return '{0}{1}({2}.{3}) :: {4}'.format(self._group, self._type, self._line, self._char, self._value)
+
+    def line(self):
+        return self._line
+
+    def char(self):
+        return self._char
+
+    def pos(self):
+        return (self._line, self._char)
+
+    def group(self):
+        return self._group
+
+    def type(self):
+        return self._type
+
+    def value(self):
+        return self._value
+
+
+class Lexer:
     """Tokenizer class.
     """
     def __init__(self, string=''):
