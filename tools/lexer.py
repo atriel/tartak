@@ -38,8 +38,7 @@ import sys
 sys.path.insert(1, os.getcwd())
 
 try:
-    from tartak import lexer
-    from tartak import __version__ as VERSION
+    import tartak
 except ImportError as e:
     print('fatal: cannot import backend: {0}'.format(e))
     print('note:  check if Tartak is correctly installed on your system (if it is, check your Python path)')
@@ -54,7 +53,7 @@ if len(args) < 2 or len(args) > 3:
         exit(1)
 
 if args[0] == '--help':
-    print(__doc__.format(tartak_version=VERSION))
+    print(__doc__.format(tartak_version=tartak.__version__))
     exit(0)
 
 
@@ -62,7 +61,7 @@ LEXER_RULES = args[0]
 PATH = args[1]
 OUTPUT = (args[2] if len(args) == 3 else 'a.tokens')
 
-if not os.path.isfile(LEXER_RULES):
+if not os.path.isfile(LEXER_RULES) and LEXER_RULES != 'default':
     print('fatal: {0} does not point to a file'.format(repr(LEXER_RULES)))
     exit(3)
 
@@ -83,25 +82,12 @@ finally:
         exit(4)
 
 
-# TODO: fix further code
-exit(99)
+lexer = tartak.lexer.Lexer()
+lexer._flags['string-sgl-triple'] = True
+lexer._flags['string-dbl-triple'] = True
 
-tknzr.addRule(name='name', rule='[a-zA-Z_][a-zA-Z0-9_]*', type='regex')
-tknzr.addRule(name='comment-inline', rule='//.*(\n|$)', type='regex')
-tknzr.addRule(name='comment-block', rule='(?s)/\*.*?\*/', type='regex')
+ifstream = open(PATH, 'r')
+string = ifstream.read()
+ifstream.close()
 
-tokens = []
-tknzr.feed(text).tokenise()
-raw = list(tknzr)
-tokens = [i for i in raw if i[1][:7] != 'comment']
-print('raw tokens: {0}'.format(len(raw)))
-print('meaningful (without comments) tokens: {0} ({1}% less)'.format(len(tokens), round((len(raw)-len(tokens))/len(raw)*100, 2)))
-#print(tokens)
-
-PARSER_RULES = [
-        ('import-statement', 'keyword-import name ";"'),
-        ]
-
-prsr = source.parser.Parser(tokens)
-for name, pattern in PARSER_RULES: prsr.addRule(name, source.parser.deserialise(pattern))
-#prsr.parse()
+lexer.feed(string).tokenize(strategy='default', errors='throw').tokens()
