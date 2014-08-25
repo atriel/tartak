@@ -78,9 +78,10 @@ By default, Tartak stops lexing the moment it finds a sequence of characters it 
 However, it can be told to go on and do not stop on errors;
 in such an event, lexer can be told to do different things with the error-causing characters:
 
+- *throw*:  default error-handling mode, throw errors the time they are encountered;
 - *save*:   this tells Tartak to save the error-causing characters as a token, and leave it on the
             token list, you should check the source code for the exact group and type of these tokens
-            but it ought to be `tartak:unrec`;
+            but it ought to be `tartak:error`;
 - *drop*:   this tells Tartak to drop error-causing characters and go on like if nothing happened at all,
             such cavalier behaviour (to put it mildly) can be dangerous and lead to errors;
 
