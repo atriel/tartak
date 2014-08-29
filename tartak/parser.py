@@ -208,3 +208,14 @@ class Parser:
             part, n = self._apply(self._rules[rule], tokens)
             tokens = tokens[n:]
         return self
+
+
+class NewParser:
+    def __init__(self, lexer):
+        self._lexrules = lexer._rules
+        self._rules = {}
+        self._tokens = lexer._tokens
+
+    def append(self, *args, **kwargs):
+        # TODO
+        pass

@@ -61,10 +61,6 @@ LEXER_RULES = args[0]
 PATH = args[1]
 OUTPUT = (args[2] if len(args) == 3 else 'a.tokens')
 
-if not os.path.isfile(LEXER_RULES) and LEXER_RULES != 'default':
-    print('fatal: {0} does not point to a file'.format(repr(LEXER_RULES)))
-    exit(3)
-
 if not os.path.isfile(PATH):
     print('fatal: {0} does not point to a file'.format(repr(PATH)))
     exit(3)
@@ -83,11 +79,118 @@ finally:
 
 
 lexer = tartak.lexer.Lexer()
-lexer._flags['string-sgl-triple'] = True
-lexer._flags['string-dbl-triple'] = True
 
-ifstream = open(PATH, 'r')
-string = ifstream.read()
-ifstream.close()
+if LEXER_RULES == 'python' or LEXER_RULES == 'default':
+    lexer._flags['string-sgl-triple'] = True
+    lexer._flags['string-dbl-triple'] = True
 
-lexer.feed(string).tokenize(strategy='default', errors='throw').tokens()
+    lexer.append(tartak.lexer.RegexRule(name='comment', pattern='^#.*'))
+
+    lexer.append(tartak.lexer.StringRule(group='keyword', name='import', pattern='import'))
+    lexer.append(tartak.lexer.StringRule(group='keyword', name='from', pattern='from'))
+
+    lexer.append(tartak.lexer.StringRule(group='operator', name='noteq', pattern='!='))
+    lexer.append(tartak.lexer.StringRule(group='operator', name='eq', pattern='=='))
+    lexer.append(tartak.lexer.StringRule(group='operator', name='lte', pattern='<='))
+    lexer.append(tartak.lexer.StringRule(group='operator', name='gte', pattern='>='))
+    lexer.append(tartak.lexer.StringRule(group='operator', name='lt', pattern='<'))
+    lexer.append(tartak.lexer.StringRule(group='operator', name='gt', pattern='>'))
+
+    lexer.append(tartak.lexer.StringRule(group='operator', name='assplus', pattern='+='))
+    lexer.append(tartak.lexer.StringRule(group='operator', name='assminus', pattern='-='))
+    lexer.append(tartak.lexer.StringRule(group='operator', name='assmul', pattern='*='))
+    lexer.append(tartak.lexer.StringRule(group='operator', name='assdiv', pattern='/='))
+
+    lexer.append(tartak.lexer.StringRule(group='operator', name='dot', pattern='.'))
+    lexer.append(tartak.lexer.StringRule(group='operator', name='comma', pattern=','))
+    lexer.append(tartak.lexer.StringRule(group='operator', name='assign', pattern='='))
+    lexer.append(tartak.lexer.StringRule(group='operator', name='colon', pattern=':'))
+    lexer.append(tartak.lexer.StringRule(group='operator', name='semicolon', pattern=';'))
+    lexer.append(tartak.lexer.StringRule(group='operator', name='dblstar', pattern='**'))
+    lexer.append(tartak.lexer.StringRule(group='operator', name='plus', pattern='+'))
+    lexer.append(tartak.lexer.StringRule(group='operator', name='minus', pattern='-'))
+    lexer.append(tartak.lexer.StringRule(group='operator', name='star', pattern='*'))
+    lexer.append(tartak.lexer.StringRule(group='operator', name='div', pattern='/'))
+    lexer.append(tartak.lexer.StringRule(group='operator', name='modulo', pattern='%'))
+
+    lexer.append(tartak.lexer.StringRule(group='paren', name='lparen', pattern='('))
+    lexer.append(tartak.lexer.StringRule(group='paren', name='rparen', pattern=')'))
+    lexer.append(tartak.lexer.StringRule(group='bracket', name='lsquare', pattern='['))
+    lexer.append(tartak.lexer.StringRule(group='bracket', name='rsquare', pattern=']'))
+    lexer.append(tartak.lexer.StringRule(group='bracket', name='lcurly', pattern='{'))
+    lexer.append(tartak.lexer.StringRule(group='bracket', name='rcurly', pattern='}'))
+
+    lexer.append(tartak.lexer.StringRule(group='boolean', name='false', pattern='False'))
+    lexer.append(tartak.lexer.StringRule(group='boolean', name='true', pattern='True'))
+
+    lexer.append(tartak.lexer.RegexRule(group='integer', name='dec', pattern='^(0|[1-9][0-9]*)'))
+
+    lexer.append(tartak.lexer.RegexRule(name='name', pattern='^[a-zA-Z_][a-zA-Z0-9_]*'))
+elif LEXER_RULES == 'cpp' or LEXER_RULES == 'c++' or LEXER_RULES == 'c':
+    lexer.append(tartak.lexer.RegexRule(group='comment', name='inline', pattern='^//.*'))
+
+    lexer.append(tartak.lexer.StringRule(group='directive', name='include', pattern='#include'))
+
+    lexer.append(tartak.lexer.StringRule(group='operator', name='noteq', pattern='!='))
+    lexer.append(tartak.lexer.StringRule(group='operator', name='eq', pattern='=='))
+    lexer.append(tartak.lexer.StringRule(group='operator', name='lte', pattern='<='))
+    lexer.append(tartak.lexer.StringRule(group='operator', name='gte', pattern='>='))
+
+    lexer.append(tartak.lexer.StringRule(group='operator', name='lt', pattern='<'))
+    lexer.append(tartak.lexer.StringRule(group='operator', name='gt', pattern='>'))
+
+    lexer.append(tartak.lexer.StringRule(group='operator', name='dblcolon', pattern='::'))
+    lexer.append(tartak.lexer.StringRule(group='operator', name='dot', pattern='.'))
+    lexer.append(tartak.lexer.StringRule(group='operator', name='comma', pattern=','))
+    lexer.append(tartak.lexer.StringRule(group='operator', name='assign', pattern='='))
+    lexer.append(tartak.lexer.StringRule(group='operator', name='colon', pattern=':'))
+    lexer.append(tartak.lexer.StringRule(group='operator', name='semicolon', pattern=';'))
+
+    lexer.append(tartak.lexer.StringRule(group='operator', name='plus', pattern='+'))
+    lexer.append(tartak.lexer.StringRule(group='operator', name='minus', pattern='-'))
+    lexer.append(tartak.lexer.StringRule(group='operator', name='star', pattern='*'))
+    lexer.append(tartak.lexer.StringRule(group='operator', name='div', pattern='/'))
+    lexer.append(tartak.lexer.StringRule(group='operator', name='modulo', pattern='%'))
+
+    lexer.append(tartak.lexer.StringRule(group='operator', name='qmark', pattern='?'))
+    lexer.append(tartak.lexer.StringRule(group='operator', name='xmark', pattern='!'))
+
+    lexer.append(tartak.lexer.StringRule(group='paren', name='lparen', pattern='('))
+    lexer.append(tartak.lexer.StringRule(group='paren', name='rparen', pattern=')'))
+    lexer.append(tartak.lexer.StringRule(group='bracket', name='lsquare', pattern='['))
+    lexer.append(tartak.lexer.StringRule(group='bracket', name='rsquare', pattern=']'))
+    lexer.append(tartak.lexer.StringRule(group='bracket', name='lcurly', pattern='{'))
+    lexer.append(tartak.lexer.StringRule(group='bracket', name='rcurly', pattern='}'))
+
+    lexer.append(tartak.lexer.StringRule(group='type', name='void', pattern='void'))
+    lexer.append(tartak.lexer.StringRule(group='type', name='int', pattern='int'))
+    lexer.append(tartak.lexer.StringRule(group='type', name='char', pattern='char'))
+    lexer.append(tartak.lexer.StringRule(group='type', name='float', pattern='float'))
+    lexer.append(tartak.lexer.StringRule(group='type', name='double', pattern='double'))
+
+    lexer.append(tartak.lexer.RegexRule(group='integer', name='dec', pattern='^(0|[1-9][0-9]*)'))
+
+    lexer.append(tartak.lexer.RegexRule(name='name', pattern='^[a-zA-Z_][a-zA-Z0-9_]*'))
+elif LEXER_RULES == 'lol':
+    lexer.append(tartak.lexer.StringRule(group='bracket', name='lsquare', pattern='['))
+    lexer.append(tartak.lexer.StringRule(group='bracket', name='rsquare', pattern=']'))
+    lexer.append(tartak.lexer.StringRule(group='operator', name='comma', pattern=','))
+    lexer.append(tartak.lexer.StringRule(group='operator', name='assign', pattern='='))
+    lexer.append(tartak.lexer.RegexRule(name='name', pattern='^[a-zA-Z_][a-zA-Z0-9_]*'))
+else:
+    if not os.path.isfile(LEXER_RULES):
+        print('fatal: {0} does not point to a file and does not name a predefined set'.format(repr(LEXER_RULES)))
+        exit(3)
+
+try:
+    ifstream = open(PATH, 'r')
+    string = ifstream.read()
+    ifstream.close()
+
+    lexer.feed(string).tokenize(strategy='default', errors='throw')
+    print(json.dumps(lexer.dumps()))
+except tartak.errors.LexerError as e:
+    print('fail: {0}'.format(e))
+    exit(4)
+finally:
+    pass

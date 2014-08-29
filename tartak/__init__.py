@@ -1,3 +1,4 @@
+from . import errors
 from . import lexer
 from . import parser
 

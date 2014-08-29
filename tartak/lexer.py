@@ -1,18 +1,19 @@
 #!/usr/bin/env python3
 
-import json
-import sys
 import re
+
+from .errors import LexerError
 
 
 DEBUG = False
+PRINT_MATCHES = False
 
 
 class Token:
     """Simple token object.
     """
-    def __init__(self, line, char, t_type, value, t_group=''):
-        self._line, self._char = 0, 0
+    def __init__(self, line, char, value, t_type, t_group=''):
+        self._line, self._char = line, char
         self._group, self._type = t_group, t_type
         self._value = value
 
@@ -22,14 +23,28 @@ class Token:
     def __repr__(self):
         return '{0}{1}({2}.{3}) :: {4}'.format(self._group, self._type, self._line, self._char, self._value)
 
+    def dumps(self):
+        d = {
+            'line': self._line,
+            'char': self._char,
+            't_group': self._group,
+            't_type': self._type,
+            'value': self._value,
+        }
+        return d
+
+    def loads(self, d):
+        """Loads token data from dict.
+        """
+        self._line, self._group = d['line'], d['group']
+        self._group, self._type = d['group'], d['type']
+        self._value = d['value']
+
     def line(self):
         return self._line
 
     def char(self):
         return self._char
-
-    def pos(self):
-        return (self._line, self._char)
 
     def group(self):
         return self._group
@@ -44,14 +59,18 @@ class Token:
 class Rule:
     """Rule object that encapsulates pattern of single token.
     """
-    def __init__(self, name, group, pattern):
-        self._group, self._name = group, name
+    def __init__(self, name, pattern, group=None):
+        self._group, self._name = (group if group is not None else name), name
         self._pattern = pattern
+        self._type = None
 
-    def getname(self):
-        return self._group
+    def __eq__(self, other):
+        return self.data() == other.data()
 
-    def getgroup(self):
+    def ttype(self):
+        return self._name
+
+    def tgroup(self):
         return self._group
 
     def match(self, string):
@@ -63,10 +82,25 @@ class Rule:
         """
         raise Exception('this method must be overridden')
 
+    def data(self):
+        """Returns a dict containing rule's data.
+        """
+        d = {
+            'group': self._group,
+            'name': self._name,
+            'pattern': self._pattern,
+            'type': self._type
+        }
+        return d
+
 
 class StringRule(Rule):
     """Object designed to match string rules.
     """
+    def __init__(self, *args, **kwargs):
+        super(StringRule, self).__init__(*args, **kwargs)
+        self._type = 'string'
+
     def match(self, string):
         return (self._pattern if string.startswith(self._pattern) else None)
 
@@ -74,13 +108,15 @@ class StringRule(Rule):
 class RegexRule(Rule):
     """Object designed to match regex rules.
     """
-    def __init__(self, *args):
-        super(RegexRule, self).__init__(*args)
+    def __init__(self, *args, **kwargs):
+        super(RegexRule, self).__init__(*args, **kwargs)
+        pattern = kwargs['pattern']
         self._regex = re.compile('^{0}'.format(pattern) if pattern[0] != '^' else pattern)
+        self._type = 'regex'
 
     def match(self, string):
         matched = self._regex.match(string)
-        return (matched.groups(0) if matched is not None else None)
+        return (matched.group() if matched is not None else None)
 
 
 class Lexer:
@@ -88,18 +124,24 @@ class Lexer:
     """
     def __init__(self, string=''):
         self._rules = []
-        self._line, self._char, self._charcount = 0, 0, 0
+        self._line, self._char = 0, 0
         self._tokens, self._raw = [], []
         self._string = string
         self._flags = {
             'string-single': True,
             'string-double': True,
-            'string-dbl-triple': True,
-            'string-sgl-triple': True,
+            'string-dbl-triple': False,
+            'string-sgl-triple': False,
         }
 
     def __iter__(self):
         return iter(self._tokens)
+
+    def __eq__(self, other):
+        eq_rules = self._rules == other._rules
+        eq_flags = self._flags == other._flags
+        eq_string = self._string == other._string
+        return eq_rules and eq_flags and eq_string
 
     def feed(self, s):
         self._string = s
@@ -121,70 +163,29 @@ class Lexer:
         """
         match = None
         n = len(quote)
+        original = s[:]
         if s.startswith(quote):
-            quote = s[:n]
             match = quote
             s = s[n:]
         closed = False
-        while s:
-            if s.startswith(quote) and not match.endswith('\\'):
-                closed = True
-                break
-            match = s[0]
-            s = s[1:]
-        match = (match+quote if closed else None)
-        return match
-
-    def tokenize_old(self, strategy='default', errors='throw'):
-        """Generate tokens from the string received.
-        """
-        string = self._string[:]
-        while string:
-            token, t_type, t_group = None, None, None
-            if string[0] == '\n':
-                string = string[1:]
+        for i, char in enumerate(s):
+            if s[i:].startswith(quote):
+                backs = 1
+                while backs < len(s) and match[-backs].endswith('\\'): backs += 1
+                if (backs-1) % 2 == 0:
+                    match += quote
+                    closed = True
+                    break
+            if char == '\n' and quote not in ['"""', "'''"]:
+                report =  'broken string on line {0} (displaying 128 following characters)\n'
+                report += '{0}'.format(original[:128])
+                raise LexerError(report)
+            if char == '\n' and  quote in ['"""', "'''"]:
                 self._line += 1
                 self._char = 0
-                self._charcount += 1
-                continue
-            if string[0].strip() == '':
-                string = string[1:]
-                self._char += 1
-                self._charcount += 1
-                continue
-            for i in self._order:
-                if DEBUG: print('token {0}: trying rule: {1}'.format(len(self._tokens), i))
-                rule = self._rules[i]
-                match = False
-                if rule['type'] == 'string' and string.startswith(rule['rule']):
-                    token, match = rule['rule'], True
-                if rule['type'] == 'regex' and re.compile(rule['rule']).match(string):
-                    token, match = re.compile(rule['rule']).match(string).group(0), True
-                if match:
-                    t_type = i
-                    t_group = rule['group']
-                    break
-            if string[0] == "'" and self._flags['string-single']:
-                if DEBUG: print('token {0}: trying single-quoted string matching'.format(len(self._tokens)))
-                token, t_type, t_group = self._stringmatch(string, "'"), 'string', 'double'
-            if string[0] == '"' and self._flags['string-double']:
-                if DEBUG: print('token {0}: trying double-quoted string matching'.format(len(self._tokens)))
-                token, t_type, t_group = self._stringmatch(string, '"'), 'string', 'double'
-            if string.startswith('"""') and self._flags['string-triple']:
-                if DEBUG: print('token {0}: trying triple-quoted <{1}> string matching'.format(len(self._tokens), '"""'))
-                token, t_type, t_group = self._stringmatch(string, '"""'), 'string', 'triple'
-            if string.startswith("'''") and self._flags['string-triple']:
-                if DEBUG: print('token {0}: trying triple-quoted <{1}> string matching'.format(len(self._tokens), "'''"))
-                token, t_type, t_group = self._stringmatch(string, "'''"), 'string', 'triple'
-            if token is None: raise Exception('string cannot be tokenized: {0}'.format(repr(string)))
-            string = string[len(token):]
-            if DEBUG and t_type == 'string': print('token {0} got cut to:'.format(repr(token)), end=' ')
-            if DEBUG and t_type == 'string': print(repr(token))
-            t = Token(line, char, t_type, value, t_group='')
-            self._tokens.append(token)
-            self._char += len(token.value())
-            self._charcount += len(token.value())
-        return self
+            match += char
+        match = (match if closed else None)
+        return match
 
     def tokenize(self, strategy='default', errors='throw'):
         """Generate tokens from the string received.
@@ -192,43 +193,79 @@ class Lexer:
         string = self._string[:]
         while string:
             token, t_type, t_group = None, None, None
-            if string[0] == '\n':
-                string = string[1:]
-                self._line += 1
-                self._char = 0
-                self._charcount += 1
-                continue
-            if string[0].strip() == '':
-                string = string[1:]
-                self._char += 1
-                self._charcount += 1
-                continue
-            if string[0] == "'" and self._flags['string-single']:
-                if DEBUG: print('token {0}: trying single-quoted string matching'.format(len(self._tokens)))
-                token, t_type, t_group = self._stringmatch(string, "'"), 'string', 'double'
-            if string[0] == '"' and self._flags['string-double']:
-                if DEBUG: print('token {0}: trying double-quoted string matching'.format(len(self._tokens)))
-                token, t_type, t_group = self._stringmatch(string, '"'), 'string', 'double'
-            if string.startswith('"""') and self._flags['string-dbl-triple']:
-                if DEBUG: print('token {0}: trying triple-double-quoted <{1}> string matching'.format(len(self._tokens), '"""'))
-                token, t_type, t_group = self._stringmatch(string, '"""'), 'string', 'triple'
-            if string.startswith("'''") and self._flags['string-sgl-triple']:
-                if DEBUG: print('token {0}: trying triple-single-quoted <{1}> string matching'.format(len(self._tokens), "'''"))
-                token, t_type, t_group = self._stringmatch(string, "'''"), 'string', 'triple'
+            while string and string[0].strip() == '':
+                if string[0] == '\n':
+                    if token is not None: self._raw.append(Token(self._line, self._char, token, t_type, t_group))
+                    token, t_type, t_group = string[0], 'newline', 'whitespace'
+                    string = string[1:]
+                    self._raw.append(Token(self._line, self._char, token, t_type, t_group))
+                    token, t_type, t_group = None, None, None
+                    self._line += 1
+                    self._char = 0
+                else:
+                    t_type, t_group = 'space', 'whitespace'
+                    if token is None: token = string[0]
+                    else: token += string[0]
+                    string = string[1:]
+                    self._char += 1
+            if token is not None: self._raw.append(Token(self._line, self._char-1, token, t_type, t_group))
+            if token is not None or not string: continue
+            for str_type_start, str_type_name in [('"""', 'string-dbl-triple'), ("'''", 'string-sgl-triple'), ('"', 'string-double'), ("'", 'string-single')]:
+                if token is not None: break
+                if string.startswith(str_type_start) and self._flags[str_type_name]:
+                    token, t_group, t_type = self._stringmatch(string, str_type_start), 'string', str_type_name[-6:]
+            if token is None:
+                for r in self._rules:
+                    token = r.match(string)
+                    if token is not None:
+                        t_type = r.ttype()
+                        t_group = r.tgroup()
+                        break
             if token is None:
                 line = self._string.splitlines()[self._line]
                 report =  'cannot tokenize sequence starting at line {0}, character {1}:\n'.format(self._line+1, self._char+1)
                 report += line + '\n'
                 report += '{0}^'.format('-'*self._char)
-                raise Exception(report)
+                raise LexerError(report)
+            else:
+                if PRINT_MATCHES: print('match at {0}:{1}\t=> {2}::{3} {4}'.format(self._line, self._char, t_group, t_type, token))
             string = string[len(token):]
-            t = Token(line, char, t_type, value, t_group='')
-            self._tokens.append(token)
-            self._char += len(token.value())
-            self._charcount += len(token.value())
+            t = Token(self._line, self._char, token, t_type, t_group)
+            self._tokens.append(t)
+            self._raw.append(t)
+            self._char += len(t.value())
         return self
 
     def tokens(self, raw=False):
         """Return generated tokens.
         """
         return (self._tokens if not raw else self._raw)
+
+    def dumps(self):
+        """Return lexer state as JSON-serializable dict.
+        """
+        lxr = {
+            'tokens': {
+                'clean': [i.dumps() for i in self._tokens],
+                'raw': [i.dumps() for i in self._raw],
+            },
+            'rules': [i.data() for i in self._rules],
+            'flags': self._flags,
+        }
+        return lxr
+
+    def loads(self, state, string=True):
+        """Loads lexer state previously dumped to JSON.
+        Params:
+
+        :string bool: if True, rebuild string from raw tokens
+        """
+        self._raw = [Token(**i) for i in state['tokens']['raw']]
+        self._tokens = [Token(**i) for i in state['tokens']['clean']]
+        for i in state['rules']:
+            rule = (StringRule if i['type'] == 'string' else RegexRule)
+            del i['type']
+            self.append( rule(**i) )
+        self._flags = state['flags']
+        if string: self._string = ''.join([i.value() for i in self._raw])
+        return self
