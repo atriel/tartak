@@ -188,7 +188,7 @@ try:
     ifstream.close()
 
     lexer.feed(string).tokenize(strategy='default', errors='throw')
-    print(json.dumps(lexer.dumps()))
+    print(json.dumps(lexer.tokens().dumps()))
 except tartak.errors.LexerError as e:
     print('fail: {0}'.format(e))
     exit(4)
