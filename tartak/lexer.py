@@ -9,6 +9,7 @@ DEBUG = False
 PRINT_MATCHES = False
 
 
+# Token-related abstractions
 class Token:
     """Simple token object.
     """
@@ -56,6 +57,51 @@ class Token:
         return self._value
 
 
+class TokenStream:
+    """Class representing token streams used by Tartak.
+    """
+    def __init__(self, vector=()):
+        """Vector is any object that can be iterated and
+        yields Token objects during iteration.
+        """
+        self._tokens = ([t for t in vector] if vector else [])
+        self._at = 0
+
+    def __len__(self):
+        return len(self._tokens)
+
+    def __iter__(self):
+        return iter(self._tokens)
+
+    @classmethod
+    def new(self, n=1):
+        return tuple([TokenStream() for i in range(n)])
+
+    def point(self, at):
+        """At is an integer telling which token is to be considered *first* now.
+        """
+        self._at = at
+        return self
+
+    def seek(self, at):
+        """Returns token at given index.
+        """
+        return self._tokens[ (self._at+at if at >= 0 else at) ]
+
+    def append(self, token):
+        """Append token to stream.
+        """
+        self._tokens.append(token)
+        return self
+
+    def dumps(self):
+        """Return list of tokens as dumped dictionaries.
+        Used to serialize token streams.
+        """
+        return [token.dumps() for token in self]
+
+
+# Rule-related abstarctions
 class Rule:
     """Rule object that encapsulates pattern of single token.
     """
@@ -119,13 +165,14 @@ class RegexRule(Rule):
         return (matched.group() if matched is not None else None)
 
 
+# Lexer
 class Lexer:
-    """Tokenizer class.
+    """Lexer class.
     """
     def __init__(self, string=''):
         self._rules = []
         self._line, self._char = 0, 0
-        self._tokens, self._raw = [], []
+        self._tokens, self._raw = TokenStream.new(2)
         self._string = string
         self._flags = {
             'string-single': True,
@@ -140,8 +187,7 @@ class Lexer:
     def __eq__(self, other):
         eq_rules = self._rules == other._rules
         eq_flags = self._flags == other._flags
-        eq_string = self._string == other._string
-        return eq_rules and eq_flags and eq_string
+        return eq_rules and eq_flags
 
     def feed(self, s):
         self._string = s
@@ -245,27 +291,17 @@ class Lexer:
         """Return lexer state as JSON-serializable dict.
         """
         lxr = {
-            'tokens': {
-                'clean': [i.dumps() for i in self._tokens],
-                'raw': [i.dumps() for i in self._raw],
-            },
             'rules': [i.data() for i in self._rules],
             'flags': self._flags,
         }
         return lxr
 
-    def loads(self, state, string=True):
+    def loads(self, state):
         """Loads lexer state previously dumped to JSON.
-        Params:
-
-        :string bool: if True, rebuild string from raw tokens
         """
-        self._raw = [Token(**i) for i in state['tokens']['raw']]
-        self._tokens = [Token(**i) for i in state['tokens']['clean']]
         for i in state['rules']:
             rule = (StringRule if i['type'] == 'string' else RegexRule)
             del i['type']
             self.append( rule(**i) )
         self._flags = state['flags']
-        if string: self._string = ''.join([i.value() for i in self._raw])
         return self
