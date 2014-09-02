@@ -56,6 +56,12 @@ if args[0] == '--help':
     print(__doc__.format(tartak_version=tartak.__version__))
     exit(0)
 
+if args[0] in ['--check-syntax', '-S']:
+    JUST_CHECK_SYNTAX = True
+    args.pop(0)
+else:
+    JUST_CHECK_SYNTAX = False
+
 
 LEXER_RULES = args[0]
 PATH = args[1]
@@ -88,6 +94,24 @@ if LEXER_RULES == 'python' or LEXER_RULES == 'default':
 
     lexer.append(tartak.lexer.StringRule(group='keyword', name='import', pattern='import'))
     lexer.append(tartak.lexer.StringRule(group='keyword', name='from', pattern='from'))
+    lexer.append(tartak.lexer.StringRule(group='keyword', name='if', pattern='if'))
+    lexer.append(tartak.lexer.StringRule(group='keyword', name='elif', pattern='elif'))
+    lexer.append(tartak.lexer.StringRule(group='keyword', name='else', pattern='else'))
+    lexer.append(tartak.lexer.StringRule(group='keyword', name='def', pattern='def'))
+    lexer.append(tartak.lexer.StringRule(group='keyword', name='class', pattern='class'))
+    lexer.append(tartak.lexer.StringRule(group='keyword', name='while', pattern='while'))
+    lexer.append(tartak.lexer.StringRule(group='keyword', name='for', pattern='for'))
+    lexer.append(tartak.lexer.StringRule(group='keyword', name='return', pattern='return'))
+    lexer.append(tartak.lexer.StringRule(group='keyword', name='yield', pattern='yield'))
+    lexer.append(tartak.lexer.StringRule(group='keyword', name='break', pattern='break'))
+    lexer.append(tartak.lexer.StringRule(group='keyword', name='continue', pattern='continue'))
+    lexer.append(tartak.lexer.StringRule(group='keyword', name='lambda', pattern='lambda'))
+    lexer.append(tartak.lexer.StringRule(group='keyword', name='raise', pattern='raise'))
+    lexer.append(tartak.lexer.StringRule(group='keyword', name='try', pattern='try'))
+    lexer.append(tartak.lexer.StringRule(group='keyword', name='except', pattern='except'))
+    lexer.append(tartak.lexer.StringRule(group='keyword', name='finally', pattern='finally'))
+    lexer.append(tartak.lexer.StringRule(group='keyword', name='with', pattern='with'))
+    lexer.append(tartak.lexer.StringRule(group='keyword', name='as', pattern='as'))
 
     lexer.append(tartak.lexer.StringRule(group='operator', name='noteq', pattern='!='))
     lexer.append(tartak.lexer.StringRule(group='operator', name='eq', pattern='=='))
@@ -101,6 +125,11 @@ if LEXER_RULES == 'python' or LEXER_RULES == 'default':
     lexer.append(tartak.lexer.StringRule(group='operator', name='assmul', pattern='*='))
     lexer.append(tartak.lexer.StringRule(group='operator', name='assdiv', pattern='/='))
 
+    lexer.append(tartak.lexer.StringRule(group='operator', name='or', pattern='|'))
+    lexer.append(tartak.lexer.StringRule(group='operator', name='and', pattern='&'))
+
+    lexer.append(tartak.lexer.StringRule(group='operator', name='linecont', pattern='\\'))
+
     lexer.append(tartak.lexer.StringRule(group='operator', name='dot', pattern='.'))
     lexer.append(tartak.lexer.StringRule(group='operator', name='comma', pattern=','))
     lexer.append(tartak.lexer.StringRule(group='operator', name='assign', pattern='='))
@@ -112,6 +141,8 @@ if LEXER_RULES == 'python' or LEXER_RULES == 'default':
     lexer.append(tartak.lexer.StringRule(group='operator', name='star', pattern='*'))
     lexer.append(tartak.lexer.StringRule(group='operator', name='div', pattern='/'))
     lexer.append(tartak.lexer.StringRule(group='operator', name='modulo', pattern='%'))
+
+    lexer.append(tartak.lexer.StringRule(group='operator', name='anota', pattern='@'))
 
     lexer.append(tartak.lexer.StringRule(group='paren', name='lparen', pattern='('))
     lexer.append(tartak.lexer.StringRule(group='paren', name='rparen', pattern=')'))
@@ -188,7 +219,7 @@ try:
     ifstream.close()
 
     lexer.feed(string).tokenize(strategy='default', errors='throw')
-    print(json.dumps(lexer.tokens().dumps()))
+    if not JUST_CHECK_SYNTAX: print(json.dumps(lexer.tokens().dumps()))
 except tartak.errors.LexerError as e:
     print('fail: {0}'.format(e))
     exit(4)
