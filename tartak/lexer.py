@@ -28,6 +28,9 @@ class LexerRule:
     def tgroup(self):
         return self._group
 
+    def pattern(self):
+        return self._pattern
+
     def match(self, string):
         """This method must be overridden in inheriting classes.
         Raise an exception if used directly.
@@ -44,7 +47,7 @@ class LexerRule:
             'group': self._group,
             'name': self._name,
             'pattern': self._pattern,
-            'type': self._type
+            'type': self._type,
         }
         return d
 
@@ -173,9 +176,21 @@ class Lexer:
                 for r in self._rules:
                     token = r.match(string)
                     if token is not None:
-                        t_type = r.ttype()
-                        t_group = r.tgroup()
-                        break
+                        n = len(string[len(token):])
+                        if n > 0 and type(r) is StringRule and re.compile('[a-zA-Z_][a-zA-Z0-9_]*').match(r.pattern()) is not None and re.compile('[a-zA-Z0-9_]').match(string[len(token)]) is None:
+                            done = True
+                        elif n == 0:
+                            done = True
+                        elif type(r) is RegexRule:
+                            done = True
+                        elif n > 0 and type(r) is StringRule and re.compile('[a-zA-Z_][a-zA-Z0-9_]*').match(r.pattern()) is None:
+                            done = True
+                        else:
+                            done = False
+                        if done:
+                            t_type = r.ttype()
+                            t_group = r.tgroup()
+                            break
             if token is None:
                 line = self._string.splitlines()[self._line]
                 report =  'cannot tokenize sequence starting at line {0}, character {1}:\n'.format(self._line+1, self._char+1)

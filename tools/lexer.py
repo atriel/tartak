@@ -86,7 +86,7 @@ finally:
 
 lexer = tartak.lexer.Lexer()
 
-if LEXER_RULES == 'python' or LEXER_RULES == 'default':
+if LEXER_RULES == 'py' or LEXER_RULES == 'python' or LEXER_RULES == 'default':
     lexer._flags['string-sgl-triple'] = True
     lexer._flags['string-dbl-triple'] = True
 
@@ -157,8 +157,9 @@ if LEXER_RULES == 'python' or LEXER_RULES == 'default':
     lexer.append(tartak.lexer.RegexRule(group='integer', name='dec', pattern='^(0|[1-9][0-9]*)'))
 
     lexer.append(tartak.lexer.RegexRule(name='name', pattern='^[a-zA-Z_][a-zA-Z0-9_]*'))
-elif LEXER_RULES == 'cpp' or LEXER_RULES == 'c++' or LEXER_RULES == 'c':
+elif LEXER_RULES == 'c++' or LEXER_RULES == 'cpp' or LEXER_RULES == 'c++' or LEXER_RULES == 'c':
     lexer.append(tartak.lexer.RegexRule(group='comment', name='inline', pattern='^//.*'))
+    lexer.append(tartak.lexer.RegexRule(group='comment', name='block', pattern='^/\*.*\*/'))
 
     lexer.append(tartak.lexer.StringRule(group='directive', name='include', pattern='#include'))
 
@@ -198,6 +199,8 @@ elif LEXER_RULES == 'cpp' or LEXER_RULES == 'c++' or LEXER_RULES == 'c':
     lexer.append(tartak.lexer.StringRule(group='type', name='char', pattern='char'))
     lexer.append(tartak.lexer.StringRule(group='type', name='float', pattern='float'))
     lexer.append(tartak.lexer.StringRule(group='type', name='double', pattern='double'))
+
+    lexer.append(tartak.lexer.StringRule(group='keyword', name='if', pattern='if'))
 
     lexer.append(tartak.lexer.RegexRule(group='integer', name='dec', pattern='^(0|[1-9][0-9]*)'))
 
