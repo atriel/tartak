@@ -13,7 +13,7 @@ PRINT_MATCHES = False
 class LexerRule:
     """Rule object that encapsulates pattern of single token.
     """
-    def __init__(self, name, pattern, group=None):
+    def __init__(self, pattern, name, group=None):
         self._group, self._name = (group if group is not None else name), name
         self._pattern = pattern
         self._type = None
