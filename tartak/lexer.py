@@ -9,7 +9,6 @@ from .tokens import Token, TokenStream
 DEBUG = False
 PRINT_MATCHES = False
 
-
 # Rule-related abstarctions
 class LexerRule:
     """Rule object that encapsulates pattern of single token.
@@ -55,12 +54,17 @@ class LexerRule:
 class StringRule(LexerRule):
     """Object designed to match string rules.
     """
+    _identifier_char = re.compile('[a-zA-Z0-9_]+')
     def __init__(self, *args, **kwargs):
         super(StringRule, self).__init__(*args, **kwargs)
         self._type = 'string'
 
     def match(self, string):
-        return (self._pattern if string.startswith(self._pattern) else None)
+        match = (self._pattern if string.startswith(self._pattern) else None)
+        if match is not None and self._identifier_char.match(self._pattern) is not None:
+            n = len(string[len(match):])
+            if n > 0 and self._identifier_char.match(string[len(match)]) is not None: match = None
+        return match
 
 
 class RegexRule(LexerRule):
@@ -176,21 +180,9 @@ class Lexer:
                 for r in self._rules:
                     token = r.match(string)
                     if token is not None:
-                        n = len(string[len(token):])
-                        if n > 0 and type(r) is StringRule and re.compile('[a-zA-Z_][a-zA-Z0-9_]*').match(r.pattern()) is not None and re.compile('[a-zA-Z0-9_]').match(string[len(token)]) is None:
-                            done = True
-                        elif n == 0:
-                            done = True
-                        elif type(r) is RegexRule:
-                            done = True
-                        elif n > 0 and type(r) is StringRule and re.compile('[a-zA-Z_][a-zA-Z0-9_]*').match(r.pattern()) is None:
-                            done = True
-                        else:
-                            done = False
-                        if done:
-                            t_type = r.ttype()
-                            t_group = r.tgroup()
-                            break
+                        t_type = r.ttype()
+                        t_group = r.tgroup()
+                        break
             if token is None:
                 line = self._string.splitlines()[self._line]
                 report =  'cannot tokenize sequence starting at line {0}, character {1}:\n'.format(self._line+1, self._char+1)
