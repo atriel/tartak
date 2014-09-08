@@ -67,6 +67,9 @@ class TokenStream:
     def __iter__(self):
         return iter(self._tokens)
 
+    def __getitem__(self, n):
+        return self._tokens[n]
+
     @classmethod
     def new(self, n=1):
         return tuple([TokenStream() for i in range(n)])
