@@ -72,7 +72,7 @@ The actual matching logic can be controlled by running lexer in different modes:
 - *inspect*: Tartak will accept first match but will continue checking for other matches and
              will report any potentially ambiguous tokens;
 - *debug*:   same as *inspect* mode but instead of reporting and continuing with first match
-             Tartak will raise and error about ambiguous tokens;
+             Tartak will raise an error to inform about ambiguous tokens;
 
 By default, Tartak stops lexing the moment it finds a sequence of characters it cannot match.
 However, it can be told to go on and do not stop on errors;
