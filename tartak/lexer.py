@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 
 import re
+import warnings
 
 from .errors import LexerError
 from .tokens import Token, TokenStream
 
 
 DEBUG = False
-PRINT_MATCHES = False
 
 # Rule-related abstarctions
 class LexerRule:
@@ -149,7 +149,7 @@ class Lexer:
         match = (match if closed else None)
         return match
 
-    def tokenize(self, strategy='default', errors='throw'):
+    def tokenize(self, indent=False, errors='throw'):
         """Generate tokens from the string received.
         """
         string = self._string[:]
@@ -157,7 +157,9 @@ class Lexer:
             token, t_type, t_group = None, None, None
             while string and string[0].strip() == '':
                 if string[0] == '\n':
-                    if token is not None: self._raw.append(Token(self._line, self._char, token, t_type, t_group))
+                    if token is not None:
+                        self._raw.append(Token(self._line, self._char, token, t_type, t_group))
+                        if indent: self._tokens.append(Token(self._line, self._char, token, t_type, t_group))
                     token, t_type, t_group = string[0], 'newline', 'whitespace'
                     string = string[1:]
                     self._raw.append(Token(self._line, self._char, token, t_type, t_group))
@@ -170,7 +172,9 @@ class Lexer:
                     else: token += string[0]
                     string = string[1:]
                     self._char += 1
-            if token is not None: self._raw.append(Token(self._line, self._char-1, token, t_type, t_group))
+            if token is not None:
+                self._raw.append(Token(self._line, self._char-1, token, t_type, t_group))
+                if self._char - len(token) == 0 and indent: self._tokens.append(Token(self._line, self._char-1, token, t_type, t_group))
             if token is not None or not string: continue
             for str_type_start, str_type_name in [('"""', 'string-dbl-triple'), ("'''", 'string-sgl-triple'), ('"', 'string-double'), ("'", 'string-single')]:
                 if token is not None: break
@@ -184,13 +188,14 @@ class Lexer:
                         t_group = r.tgroup()
                         break
             if token is None:
-                line = self._string.splitlines()[self._line]
-                report =  'cannot tokenize sequence starting at line {0}, character {1}:\n'.format(self._line+1, self._char+1)
-                report += line + '\n'
-                report += '{0}^'.format('-'*self._char)
-                raise LexerError(report)
-            else:
-                if PRINT_MATCHES: print('match at {0}:{1}\t=> {2}::{3} {4}'.format(self._line, self._char, t_group, t_type, token))
+                if errors == 'save':
+                    t_group, t_type, token = 'tartak', 'invalid', string[0]
+                else:
+                    line = self._string.splitlines()[self._line]
+                    report =  'cannot tokenize sequence starting at line {0}, character {1}:\n'.format(self._line+1, self._char+1)
+                    report += line + '\n'
+                    report += '{0}^'.format('-'*self._char)
+                    raise LexerError(report)
             string = string[len(token):]
             t = Token(self._line, self._char, token, t_type, t_group)
             self._tokens.append(t)
