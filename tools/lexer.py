@@ -38,6 +38,19 @@ import sys
 sys.path.insert(1, os.getcwd())
 
 try:
+    import clap
+except ImportError:
+    try:
+        from contrib import clap
+    except ImportError:
+        clap = None
+finally:
+    if clap is None:
+        print('fatal: cannot import UI library: clap')
+        exit(1)
+
+
+try:
     import tartak
 except ImportError as e:
     print('fatal: cannot import backend: {0}'.format(e))
@@ -221,7 +234,7 @@ try:
     string = ifstream.read()
     ifstream.close()
 
-    lexer.feed(string).tokenize(strategy='default', errors='throw')
+    lexer.feed(string).tokenize(errors='throw')
     if not JUST_CHECK_SYNTAX: print(json.dumps(lexer.tokens().dumps()))
 except tartak.errors.LexerError as e:
     print('fail: {0}'.format(e))

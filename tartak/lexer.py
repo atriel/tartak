@@ -120,6 +120,12 @@ class Lexer:
         self._rules.append(rule)
         return self
 
+    def setFlag(self, flag, value=True):
+        """Sets flag to specified value.
+        """
+        self._flags[flag] = value
+        return self
+
     def _stringmatch(self, s, quote):
         """Method that will match strings.
         """
@@ -148,6 +154,14 @@ class Lexer:
             match += char
         match = (match if closed else None)
         return match
+
+    def _stringconsume(self, s):
+        token, t_type, t_group = None, None, None
+        for str_type_start, str_type_name in [('"""', 'string-dbl-triple'), ("'''", 'string-sgl-triple'), ('"', 'string-double'), ("'", 'string-single')]:
+            if s.startswith(str_type_start) and self._flags[str_type_name]:
+                token, t_group, t_type = self._stringmatch(s, str_type_start), 'string', str_type_name[-6:]
+                break
+        return (t_group, t_type, token)
 
     def _getrulematch(self, s):
         match = False
@@ -199,6 +213,12 @@ class Lexer:
                     token, t_type, t_group = None, None, None
                     self._line += 1
                     self._char = 0
+                elif string[0] == '\t':
+                    t_type, t_group = 'tab', 'whitespace'
+                    if token is None: token = string[0]
+                    else: token += string[0]
+                    string = string[1:]
+                    self._char += 1
                 else:
                     t_type, t_group = 'space', 'whitespace'
                     if token is None: token = string[0]
@@ -209,10 +229,7 @@ class Lexer:
                 self._raw.append(Token(self._line, self._char-1, token, t_type, t_group))
                 if self._char - len(token) == 0 and indent: self._tokens.append(Token(self._line, self._char-1, token, t_type, t_group))
             if token is not None or not string: continue
-            for str_type_start, str_type_name in [('"""', 'string-dbl-triple'), ("'''", 'string-sgl-triple'), ('"', 'string-double'), ("'", 'string-single')]:
-                if token is not None: break
-                if string.startswith(str_type_start) and self._flags[str_type_name]:
-                    token, t_group, t_type = self._stringmatch(string, str_type_start), 'string', str_type_name[-6:]
+            t_group, t_type, token = self._stringconsume(string)
             if token is None: t_group, t_type, token = self._rulematch(string, errors)
             string = string[len(token):]
             t = Token(self._line, self._char, token, t_type, t_group)
