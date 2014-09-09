@@ -149,6 +149,39 @@ class Lexer:
         match = (match if closed else None)
         return match
 
+    def _getrulematch(self, s):
+        match = False
+        for r in self._rules:
+            token = r.match(s)
+            if token is not None:
+                match = True
+                break
+        return match
+
+    def _rulematch(self, s, errors='throw'):
+        token, t_type, t_group = None, None, None
+        invalid = ''
+        while not self._getrulematch(s) and s:
+            invalid += s[0]
+            s = s[1:]
+        if not invalid:
+            for r in self._rules:
+                token = r.match(s)
+                if token is not None:
+                    t_type = r.ttype()
+                    t_group = r.tgroup()
+                    break
+        if token is None:
+            if errors == 'save':
+                t_group, t_type, token = 'tartak', 'invalid', invalid
+            else:
+                line = self._string.splitlines()[self._line]
+                report =  'cannot tokenize sequence starting at line {0}, character {1}:\n'.format(self._line+1, self._char+1)
+                report += line + '\n'
+                report += '{0}^'.format('-'*self._char)
+                raise LexerError(report)
+        return (t_group, t_type, token)
+
     def tokenize(self, indent=False, errors='throw'):
         """Generate tokens from the string received.
         """
@@ -180,22 +213,7 @@ class Lexer:
                 if token is not None: break
                 if string.startswith(str_type_start) and self._flags[str_type_name]:
                     token, t_group, t_type = self._stringmatch(string, str_type_start), 'string', str_type_name[-6:]
-            if token is None:
-                for r in self._rules:
-                    token = r.match(string)
-                    if token is not None:
-                        t_type = r.ttype()
-                        t_group = r.tgroup()
-                        break
-            if token is None:
-                if errors == 'save':
-                    t_group, t_type, token = 'tartak', 'invalid', string[0]
-                else:
-                    line = self._string.splitlines()[self._line]
-                    report =  'cannot tokenize sequence starting at line {0}, character {1}:\n'.format(self._line+1, self._char+1)
-                    report += line + '\n'
-                    report += '{0}^'.format('-'*self._char)
-                    raise LexerError(report)
+            if token is None: t_group, t_type, token = self._rulematch(string, errors)
             string = string[len(token):]
             t = Token(self._line, self._char, token, t_type, t_group)
             self._tokens.append(t)
