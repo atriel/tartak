@@ -88,6 +88,40 @@ class LexerTests(unittest.TestCase):
         self.assertEqual('$$$', tokens[0].value())
         self.assertEqual(1, len(tokens)) # invalid chars should be grouped together
 
+    def testLexingSinglequotedString(self):
+        string = "s = 'string'"
+        lexer = getDefaultLexer(string)
+        tokens = lexer.tokenize(errors='save').tokens()
+        self.assertEqual('string', tokens[2].group())
+        self.assertEqual('single', tokens[2].type())
+        self.assertEqual("'string'", tokens[2].value())
+
+    def testLexingDoublequotedString(self):
+        string = 's = "string"'
+        lexer = getDefaultLexer(string)
+        tokens = lexer.tokenize(errors='save').tokens()
+        self.assertEqual('string', tokens[2].group())
+        self.assertEqual('double', tokens[2].type())
+        self.assertEqual('"string"', tokens[2].value())
+
+    def testLexingTripleSinglequotedString(self):
+        string = """s = '''string
+        '''"""
+        lexer = getDefaultLexer(string).setFlag('string-sgl-triple')
+        tokens = lexer.tokenize(errors='save').tokens()
+        self.assertEqual('string', tokens[2].group())
+        self.assertEqual('triple', tokens[2].type())
+        self.assertEqual("'''string\n        '''", tokens[2].value())
+
+    def testLexingTripleDoublequotedString(self):
+        string = '''s = """string
+        """'''
+        lexer = getDefaultLexer(string).setFlag('string-dbl-triple')
+        tokens = lexer.tokenize(errors='save').tokens()
+        self.assertEqual('string', tokens[2].group())
+        self.assertEqual('triple', tokens[2].type())
+        self.assertEqual('"""string\n        """', tokens[2].value())
+
 
 if __name__ == '__main__':
     unittest.main()
