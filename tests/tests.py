@@ -83,10 +83,9 @@ class LexerTests(unittest.TestCase):
         string = '$$$'
         lexer = getDefaultLexer(string)
         tokens = lexer.tokenize(errors='save').tokens()
-        print(tokens.dumps())
         self.assertEqual('tartak', tokens[0].group())
         self.assertEqual('invalid', tokens[0].type())
-        self.assertEqual('$', tokens[0].value())
+        self.assertEqual('$$$', tokens[0].value())
         self.assertEqual(1, len(tokens)) # invalid chars should be grouped together
 
 
