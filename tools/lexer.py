@@ -4,7 +4,14 @@
 
 SYNOPSIS:
     python3 tools/lexer.py --help
-    python3 tools/lexer.py <rules> <file> [<output>]
+    python3 tools/lexer.py [--errors <mode>] <rules> <file> [<output>]
+    python3 tools/lexer.py (--check-syntax | -S) <rules> <file> [<output>]
+
+
+OPTIONS:
+    -e, --errors <mode>     - tells how to handle errors (throw, save, drop)
+    -S, --check-syntax      - just check if file can be lexed
+    -h, --help              - display this message
 
 
 USAGE:
@@ -37,18 +44,6 @@ import sys
 
 sys.path.insert(1, os.getcwd())
 
-try:
-    import clap
-except ImportError:
-    try:
-        from contrib import clap
-    except ImportError:
-        clap = None
-finally:
-    if clap is None:
-        print('fatal: cannot import UI library: clap')
-        exit(1)
-
 
 try:
     import tartak
@@ -60,12 +55,7 @@ except ImportError as e:
 
 args = sys.argv[1:]
 
-if len(args) < 2 or len(args) > 3:
-    if not (args and args[0] == '--help'):
-        print('fatal: invalid number of operands: expected between 2 and 3 but got {0}'.format(len(args)))
-        exit(1)
-
-if args[0] == '--help':
+if args[0] in ['--help', '-h']:
     print(__doc__.format(tartak_version=tartak.__version__))
     exit(0)
 
@@ -74,6 +64,16 @@ if args[0] in ['--check-syntax', '-S']:
     args.pop(0)
 else:
     JUST_CHECK_SYNTAX = False
+
+if args[0] in ['-e', '--errors']:
+    args.pop(0)
+    ERRORS = args.pop(0)
+else:
+    ERRORS = 'throw'
+
+if ERRORS not in ['throw', 'save', 'drop']:
+    print('fatal: unknown error handling mode: {0}'.format(ERRORS))
+    exit(1)
 
 
 LEXER_RULES = args[0]
@@ -230,12 +230,12 @@ else:
         exit(3)
 
 try:
-    ifstream = open(PATH, 'r')
-    string = ifstream.read()
-    ifstream.close()
+    with open(PATH, 'r') as ifstream: string = ifstream.read()
 
-    lexer.feed(string).tokenize(errors='throw')
-    if not JUST_CHECK_SYNTAX: print(json.dumps(lexer.tokens().dumps()))
+    lexer.feed(string).tokenize(errors=ERRORS)
+    if not JUST_CHECK_SYNTAX:
+        out = json.dumps(lexer.tokens().dumps())
+        print(out)
 except tartak.errors.LexerError as e:
     print('fail: {0}'.format(e))
     exit(4)
