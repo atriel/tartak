@@ -67,7 +67,7 @@ token regex integer hex = "0x"
 Rules are checked against the input string in the precise order in which they appear on the list.
 The actual matching logic can be controlled by running lexer in different modes:
 
-- *default*: Tartak stops trying after first match;
+- *simple*:  Tartak stops trying after first match;
 - *long*:    in this mode Tartak will try all the rules and accept one that yields longets match;
 - *inspect*: Tartak will accept first match but will continue checking for other matches and
              will report any potentially ambiguous tokens;
