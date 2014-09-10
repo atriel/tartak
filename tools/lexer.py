@@ -44,6 +44,8 @@ import sys
 
 sys.path.insert(1, os.getcwd())
 
+import clap
+
 
 try:
     import tartak
@@ -53,41 +55,77 @@ except ImportError as e:
     exit(127)
 
 
-args = sys.argv[1:]
+base, filename = os.path.split(sys.argv.pop(0))
+filename_ui = os.path.splitext(filename)[0] + '.json'
 
-if args[0] in ['--help', '-h']:
-    print(__doc__.format(tartak_version=tartak.__version__))
+with open(os.path.join(base, filename_ui), 'r') as ifstream: model = json.loads(ifstream.read())
+
+args = list(clap.formatter.Formatter(sys.argv).format())
+command = clap.builder.Builder(model).insertHelpCommand().build().get()
+parser = clap.parser.Parser(command).feed(args)
+checker = clap.checker.RedChecker(parser)
+
+
+try:
+    err = None
+    checker.check()
+    fail = False
+except clap.errors.MissingArgumentError as e:
+    print('missing argument for option: {0}'.format(e))
+    fail = True
+except clap.errors.UnrecognizedOptionError as e:
+    print('unrecognized option found: {0}'.format(e))
+    fail = True
+except clap.errors.ConflictingOptionsError as e:
+    print('conflicting options found: {0}'.format(e))
+    fail = True
+except clap.errors.RequiredOptionNotFoundError as e:
+    fail = True
+    print('required option not found: {0}'.format(e))
+except clap.errors.InvalidOperandRangeError as e:
+    print('invalid number of operands: {0}'.format(e))
+    fail = True
+except clap.errors.UIDesignError as e:
+    print('UI has design error: {0}'.format(e))
+    fail = True
+except Exception as e:
+    print('fatal: unhandled exception: {0}: {1}'.format(str(type(e))[8:-2], e))
+    fail, err = True, e
+finally:
+    if fail: exit(1)
+    ui = parser.parse().ui().finalise()
+
+
+if '--version' in ui:
+    print('tartak version {0}'.format(tartak.__version__))
     exit(0)
+if clap.helper.HelpRunner(ui=ui, program=filename).adjust(options=['-h', '--help']).run().displayed(): exit(0)
 
-if args[0] in ['--check-syntax', '-S']:
-    JUST_CHECK_SYNTAX = True
-    args.pop(0)
-else:
-    JUST_CHECK_SYNTAX = False
 
-if args[0] in ['-e', '--errors']:
-    args.pop(0)
-    ERRORS = args.pop(0)
-else:
-    ERRORS = 'throw'
+# Standard help/version stuff behind, actual logic begins here...
+
+ui = ui.down() # go down a mode, into 'lex' mode
+operands = ui.operands()
+if len(operands) < 3: operands.append('a.tokens')
+
+LEXER_RULES, INPUT, OUTPUT = operands
+JUST_CHECK_SYNTAX = ('--syntax-check' in ui)
+
+ERRORS = (ui.get('--errors') if '--errors' in ui else 'throw')
 
 if ERRORS not in ['throw', 'save', 'drop']:
     print('fatal: unknown error handling mode: {0}'.format(ERRORS))
     exit(1)
 
-
-LEXER_RULES = args[0]
-PATH = args[1]
-OUTPUT = (args[2] if len(args) == 3 else 'a.tokens')
-
-if not os.path.isfile(PATH):
-    print('fatal: {0} does not point to a file'.format(repr(PATH)))
-    exit(3)
+if not os.path.isfile(INPUT):
+    print('fatal: {0} does not point to a file'.format(repr(INPUT)))
+    exit(1)
 
 try:
-    ofstream = open(OUTPUT, 'w')
-    ofstream.write('')
-    ofstream.close()
+    if OUTPUT != '-':
+        ofstream = open(OUTPUT, 'w')
+        ofstream.write('')
+        ofstream.close()
     err = None
 except Exception as e:
     err = e
@@ -224,18 +262,29 @@ elif LEXER_RULES == 'lol':
     lexer.append(tartak.lexer.StringRule(group='operator', name='comma', pattern=','))
     lexer.append(tartak.lexer.StringRule(group='operator', name='assign', pattern='='))
     lexer.append(tartak.lexer.RegexRule(name='name', pattern='^[a-zA-Z_][a-zA-Z0-9_]*'))
+elif LEXER_RULES == 'json':
+    lexer.append(tartak.lexer.StringRule(group='bracket', name='lcurly', pattern='{'))
+    lexer.append(tartak.lexer.StringRule(group='bracket', name='rcurly', pattern='}'))
+    lexer.append(tartak.lexer.StringRule(group='bracket', name='lsquare', pattern='['))
+    lexer.append(tartak.lexer.StringRule(group='bracket', name='rsquare', pattern=']'))
+    lexer.append(tartak.lexer.StringRule(group='operator', name='colon', pattern=':'))
+    lexer.append(tartak.lexer.StringRule(group='operator', name='comma', pattern=','))
+    lexer.append(tartak.lexer.RegexRule(group='integer', name='dec', pattern='^-?(0|[1-9][0-9]*)'))
 else:
     if not os.path.isfile(LEXER_RULES):
         print('fatal: {0} does not point to a file and does not name a predefined set'.format(repr(LEXER_RULES)))
         exit(3)
 
 try:
-    with open(PATH, 'r') as ifstream: string = ifstream.read()
+    with open(INPUT, 'r') as ifstream: string = ifstream.read()
 
     lexer.feed(string).tokenize(errors=ERRORS)
     if not JUST_CHECK_SYNTAX:
         out = json.dumps(lexer.tokens().dumps())
-        print(out)
+        if OUTPUT == '-':
+            print(out)
+        else:
+            with open(OUTPUT, 'w') as ofstream: ofstream.write(out)
 except tartak.errors.LexerError as e:
     print('fail: {0}'.format(e))
     exit(4)

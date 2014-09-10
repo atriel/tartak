@@ -1,0 +1,70 @@
+{
+    "doc": {
+        "help": "Tartak lexer.",
+        "usage": [
+            "--help",
+            "--version",
+            "[option...] <rules> <input> [<output>]",
+            "(--synatx-check | -S) <rules> <input>"
+        ],
+        "examples": [
+            {
+                "line": "--syntax-check python file.py",
+                "desc": "check file.py for unlexable sequences"
+            },
+            {
+                "line": "--errors save python file.py",
+                "desc": "tokenize file.py and save unlexable sequences to display them in the summary"
+            }
+        ]
+    },
+    "options": {
+        "global": [
+            {
+                "short": "h",
+                "long": "help",
+                "help": "display help message"
+            },
+            {
+                "short": "v",
+                "long": "verbose",
+                "conflicts": ["--quiet"],
+                "help": "display verbose output"
+            },
+            {
+                "short": "q",
+                "long": "quiet",
+                "conflicts": ["--verbose"],
+                "help": "be silent"
+            }
+        ],
+        "local": [
+            {
+                "long": "version",
+                "conflicts": ["--help"],
+                "help": "display CLAP version"
+            }
+        ]
+    },
+    "commands": {
+        "lex": {
+            "options": {
+                "local": [
+                    {
+                        "long": "syntax-check",
+                        "short": "S",
+                        "help": "just check syntax, tokenize without giving output"
+                    },
+                    {
+                        "long": "errors",
+                        "short": "e",
+                        "arguments": ["str"],
+                        "help": "set error-handling strategy"
+                    }
+                ]
+            },
+            "operands": {"no": [2, 3]}
+        }
+    },
+    "operands": {"no": [0, 0]}
+}
