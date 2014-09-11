@@ -126,6 +126,38 @@ class Lexer:
         self._flags[flag] = value
         return self
 
+    def _consumeWhitespace(self, string, indent=False):
+        """Conusme whitespace and return trimmed string.
+        """
+        token, t_type, t_group = None, None, None
+        while string and string[0].strip() == '':
+            if string[0] == '\n':
+                if token is not None:
+                    self._raw.append(Token(self._line, self._char, token, t_type, t_group))
+                    if indent: self._tokens.append(Token(self._line, self._char, token, t_type, t_group))
+                token, t_type, t_group = string[0], 'newline', 'whitespace'
+                string = string[1:]
+                self._raw.append(Token(self._line, self._char, token, t_type, t_group))
+                token, t_type, t_group = None, None, None
+                self._line += 1
+                self._char = 0
+            elif string[0] == '\t':
+                t_type, t_group = 'tab', 'whitespace'
+                if token is None: token = string[0]
+                else: token += string[0]
+                string = string[1:]
+                self._char += 1
+            else:
+                t_type, t_group = 'space', 'whitespace'
+                if token is None: token = string[0]
+                else: token += string[0]
+                string = string[1:]
+                self._char += 1
+        if token is not None:
+            self._raw.append(Token(self._line, self._char-1, token, t_type, t_group))
+            if self._char - len(token) == 0 and indent: self._tokens.append(Token(self._line, self._char-1, token, t_type, t_group))
+        return string
+
     def _stringmatch(self, s, quote):
         """Method that will match strings.
         """
@@ -204,32 +236,7 @@ class Lexer:
         string = self._string[:]
         while string:
             token, t_type, t_group = None, None, None
-            while string and string[0].strip() == '':
-                if string[0] == '\n':
-                    if token is not None:
-                        self._raw.append(Token(self._line, self._char, token, t_type, t_group))
-                        if indent: self._tokens.append(Token(self._line, self._char, token, t_type, t_group))
-                    token, t_type, t_group = string[0], 'newline', 'whitespace'
-                    string = string[1:]
-                    self._raw.append(Token(self._line, self._char, token, t_type, t_group))
-                    token, t_type, t_group = None, None, None
-                    self._line += 1
-                    self._char = 0
-                elif string[0] == '\t':
-                    t_type, t_group = 'tab', 'whitespace'
-                    if token is None: token = string[0]
-                    else: token += string[0]
-                    string = string[1:]
-                    self._char += 1
-                else:
-                    t_type, t_group = 'space', 'whitespace'
-                    if token is None: token = string[0]
-                    else: token += string[0]
-                    string = string[1:]
-                    self._char += 1
-            if token is not None:
-                self._raw.append(Token(self._line, self._char-1, token, t_type, t_group))
-                if self._char - len(token) == 0 and indent: self._tokens.append(Token(self._line, self._char-1, token, t_type, t_group))
+            string = self._consumeWhitespace(string, indent)
             if token is not None or not string: continue
             t_group, t_type, token = self._stringconsume(string)
             if token is None: t_group, t_type, token = self._rulematch(string, errors)
