@@ -198,25 +198,27 @@ class Lexer:
     def _matchRule(self, s):
         match = False
         for r in self._rules:
-            token = r.match(s)
-            if token is not None:
+            if r.match(s) is not None:
                 match = True
                 break
         return match
 
-    def _consumeRule(self, s, errors='throw'):
-        token, t_type, t_group = None, None, None
+    def _consumeRule(self, s):
+        t_group, t_type, token = None, None, None
+        for r in self._rules:
+            token = r.match(s)
+            if token is not None:
+                t_type = r.ttype()
+                t_group = r.tgroup()
+                break
+        return (t_group, t_type, token)
+
+    def _consumeInvalid(self, s, errors='throw'):
+        t_group, t_type, token = None, None, None
         invalid = ''
         while not self._matchRule(s) and s:
             invalid += s[0]
             s = s[1:]
-        if not invalid:
-            for r in self._rules:
-                token = r.match(s)
-                if token is not None:
-                    t_type = r.ttype()
-                    t_group = r.tgroup()
-                    break
         if token is None:
             if errors == 'save':
                 t_group, t_type, token = 'tartak', 'invalid', invalid
@@ -235,11 +237,11 @@ class Lexer:
         """
         string = self._string[:]
         while string:
-            token, t_type, t_group = None, None, None
             string = self._consumeWhitespace(string, indent)
-            if token is not None or not string: continue
+            if not string: break
             t_group, t_type, token = self._consumeString(string)
-            if token is None: t_group, t_type, token = self._consumeRule(string, errors)
+            if token is None: t_group, t_type, token = self._consumeRule(string)
+            if token is None: t_group, t_type, token = self._consumeInvalid(string, errors)
             string = string[len(token):]
             t = Token(self._line, self._char, token, t_type, t_group)
             self._char += len(t.value())
