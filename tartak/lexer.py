@@ -170,6 +170,8 @@ class Lexer:
         if s.startswith(quote):
             match = quote
             s = s[n:]
+        else:
+            return match
         closed = False
         for i, char in enumerate(s):
             if s[i:].startswith(quote):
@@ -219,7 +221,7 @@ class Lexer:
     def _consumeInvalid(self, s, errors='throw'):
         t_group, t_type, token = None, None, None
         invalid = ''
-        while not self._matchRule(s) and not self._matchWhitespace(s) and s:
+        while (not self._matchRule(s) and not self._matchWhitespace(s) and not self._matchString(s, '"') and not self._matchString(s, '"""') and not self._matchString(s, "'") and not self._matchString(s, "'''") and s):
             invalid += s[0]
             s = s[1:]
         if token is None:

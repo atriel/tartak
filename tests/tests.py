@@ -110,6 +110,14 @@ class LexerTests(unittest.TestCase):
         self.assertEqual('invalid', tokens[1].type())
         self.assertEqual('$', tokens[1].value())
 
+    def testUnrecognizedSequencesConsumesOnlyInvalidSequenceAndNotFollowingString(self):
+        string = 'answer = $"42"'
+        lexer = getDefaultLexer(string)
+        tokens = lexer.tokenize(errors='save').tokens()
+        self.assertEqual('tartak', tokens[2].group())
+        self.assertEqual('invalid', tokens[2].type())
+        self.assertEqual('$', tokens[2].value())
+
     def testLexingSinglequotedString(self):
         string = "s = 'string'"
         lexer = getDefaultLexer(string)
