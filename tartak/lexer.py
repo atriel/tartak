@@ -158,7 +158,7 @@ class Lexer:
             if self._char - len(token) == 0 and indent: self._tokens.append(Token(self._line, self._char-1, token, t_type, t_group))
         return string
 
-    def _stringmatch(self, s, quote):
+    def _matchString(self, s, quote):
         """Method that will match strings.
         """
         match = None
@@ -187,15 +187,15 @@ class Lexer:
         match = (match if closed else None)
         return match
 
-    def _stringconsume(self, s):
+    def _consumeString(self, s):
         token, t_type, t_group = None, None, None
         for str_type_start, str_type_name in [('"""', 'string-dbl-triple'), ("'''", 'string-sgl-triple'), ('"', 'string-double'), ("'", 'string-single')]:
             if s.startswith(str_type_start) and self._flags[str_type_name]:
-                token, t_group, t_type = self._stringmatch(s, str_type_start), 'string', str_type_name[-6:]
+                token, t_group, t_type = self._matchString(s, str_type_start), 'string', str_type_name[-6:]
                 break
         return (t_group, t_type, token)
 
-    def _getrulematch(self, s):
+    def _matchRule(self, s):
         match = False
         for r in self._rules:
             token = r.match(s)
@@ -204,10 +204,10 @@ class Lexer:
                 break
         return match
 
-    def _rulematch(self, s, errors='throw'):
+    def _consumeRule(self, s, errors='throw'):
         token, t_type, t_group = None, None, None
         invalid = ''
-        while not self._getrulematch(s) and s:
+        while not self._matchRule(s) and s:
             invalid += s[0]
             s = s[1:]
         if not invalid:
@@ -238,8 +238,8 @@ class Lexer:
             token, t_type, t_group = None, None, None
             string = self._consumeWhitespace(string, indent)
             if token is not None or not string: continue
-            t_group, t_type, token = self._stringconsume(string)
-            if token is None: t_group, t_type, token = self._rulematch(string, errors)
+            t_group, t_type, token = self._consumeString(string)
+            if token is None: t_group, t_type, token = self._consumeRule(string, errors)
             string = string[len(token):]
             t = Token(self._line, self._char, token, t_type, t_group)
             self._char += len(t.value())
