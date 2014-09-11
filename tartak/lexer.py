@@ -188,6 +188,8 @@ class Lexer:
         if token is None:
             if errors == 'save':
                 t_group, t_type, token = 'tartak', 'invalid', invalid
+            elif errors == 'drop':
+                t_group, t_type, token = 'tartak', 'drop', invalid
             else:
                 line = self._string.splitlines()[self._line]
                 report =  'cannot tokenize sequence starting at line {0}, character {1}:\n'.format(self._line+1, self._char+1)
@@ -233,9 +235,10 @@ class Lexer:
             if token is None: t_group, t_type, token = self._rulematch(string, errors)
             string = string[len(token):]
             t = Token(self._line, self._char, token, t_type, t_group)
+            self._char += len(t.value())
+            if t_group == 'tartak' and t_type == 'drop': continue
             self._tokens.append(t)
             self._raw.append(t)
-            self._char += len(t.value())
         return self
 
     def tokens(self, raw=False):

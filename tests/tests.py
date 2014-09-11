@@ -13,7 +13,7 @@ if '--no-path-guess' not in sys.argv:
 import tartak
 
 
-# helper functions
+# Helper functions
 def getDefaultLexer(string):
     lxr = tartak.lexer.Lexer(string)
     (lxr.append(tartak.lexer.StringRule(pattern='if', name='if', group='keyword'))
@@ -29,6 +29,12 @@ def getDefaultLexer(string):
     return lxr
 
 
+def readfile(path):
+    with open(path, 'r') as ifstream: string = ifstream.read()
+    return string
+
+
+# Logic code
 class LexerTests(unittest.TestCase):
     def testLexingSingleKeyword(self):
         string = 'if'
@@ -87,6 +93,14 @@ class LexerTests(unittest.TestCase):
         self.assertEqual('invalid', tokens[0].type())
         self.assertEqual('$$$', tokens[0].value())
         self.assertEqual(1, len(tokens)) # invalid chars should be grouped together
+
+    def testUnrecognizedSequencesDropError(self):
+        string = '$answer = 42'
+        lexer = getDefaultLexer(string)
+        tokens = lexer.tokenize(errors='drop').tokens()
+        self.assertEqual('name', tokens[0].group())
+        self.assertEqual('name', tokens[0].type())
+        self.assertEqual('answer', tokens[0].value())
 
     def testLexingSinglequotedString(self):
         string = "s = 'string'"
