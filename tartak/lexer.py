@@ -126,6 +126,9 @@ class Lexer:
         self._flags[flag] = value
         return self
 
+    def _matchWhitespace(self, string):
+        return (string and string[0].strip() == '')
+
     def _consumeWhitespace(self, string, indent=False):
         """Conusme whitespace and return trimmed string.
         """
@@ -216,7 +219,7 @@ class Lexer:
     def _consumeInvalid(self, s, errors='throw'):
         t_group, t_type, token = None, None, None
         invalid = ''
-        while not self._matchRule(s) and s:
+        while not self._matchRule(s) and not self._matchWhitespace(s) and s:
             invalid += s[0]
             s = s[1:]
         if token is None:
