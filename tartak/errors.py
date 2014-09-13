@@ -7,3 +7,11 @@ class TartakError(Exception):
 
 class LexerError(TartakError):
     pass
+
+
+class EmptyRuleError(LexerError):
+    pass
+
+
+class ParserError(TartakError):
+    pass
