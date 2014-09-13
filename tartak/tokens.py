@@ -91,6 +91,17 @@ class TokenStream:
         self._tokens.append(token)
         return self
 
+    def remove(self, group=None, type=None):
+        """Remove tokens from stream.
+        """
+        tokens = []
+        for t in self._tokens:
+            if group is not None and t.group() == group: continue
+            if type is not None and t.type() == type: continue
+            tokens.append(t)
+        self._tokens = tokens
+        return self
+
     def dumps(self):
         """Return list of tokens as dumped dictionaries.
         Used to serialize token streams.
