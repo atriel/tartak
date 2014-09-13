@@ -52,6 +52,10 @@ class LexerTests(unittest.TestCase):
         self.assertEqual('name', tokens[0].group())
         self.assertEqual('ifstream', tokens[0].value())
 
+    def testRulesDoNotAcceptEmptyStrings(self):
+        self.assertRaises(tartak.errors.EmptyRuleError, tartak.lexer.StringRule, group='foo', name='bar', pattern='')
+        self.assertRaises(tartak.errors.EmptyRuleError, tartak.lexer.RegexRule, group='foo', name='bar', pattern='')
+
     def testRawTokensContainWhitespace(self):
         string = '  if'
         lexer = getDefaultLexer(string)
@@ -111,12 +115,19 @@ class LexerTests(unittest.TestCase):
         self.assertEqual('$', tokens[1].value())
 
     def testUnrecognizedSequencesConsumesOnlyInvalidSequenceAndNotFollowingString(self):
-        string = 'answer = $"42"'
-        lexer = getDefaultLexer(string)
-        tokens = lexer.tokenize(errors='save').tokens()
-        self.assertEqual('tartak', tokens[2].group())
-        self.assertEqual('invalid', tokens[2].type())
-        self.assertEqual('$', tokens[2].value())
+        variants = ['answer = $"42"',
+                    'answer = $"""42\n"""',
+                    "answer = $'42'",
+                    "answer = $'''42'''",
+                    ]
+        for string in variants:
+            lexer = getDefaultLexer(string)
+            lexer._flags['string-dbl-triple'] = True
+            lexer._flags['string-sgl-triple'] = True
+            tokens = lexer.tokenize(errors='save').tokens()
+            self.assertEqual('tartak', tokens[2].group())
+            self.assertEqual('invalid', tokens[2].type())
+            self.assertEqual('$', tokens[2].value())
 
     def testLexingSinglequotedString(self):
         string = "s = 'string'"
@@ -151,6 +162,55 @@ class LexerTests(unittest.TestCase):
         self.assertEqual('string', tokens[2].group())
         self.assertEqual('triple', tokens[2].type())
         self.assertEqual('"""string\n        """', tokens[2].value())
+
+
+class LexerExporterTests(unittest.TestCase):
+    def testExportingStringRule(self):
+        lxr = tartak.lexer.Lexer().append(tartak.lexer.StringRule(group='keyword', name='if', pattern='if'))
+        self.assertEqual('token string keyword:if = "if";', lxr.export())
+
+    def testExportingRegexRule(self):
+        lxr = tartak.lexer.Lexer().append(tartak.lexer.RegexRule(group='integer', name='dec', pattern='(0|[1-9][0-9]*)'))
+        self.assertEqual('token regex integer:dec = "(0|[1-9][0-9]*)";', lxr.export())
+
+
+class LexerImporterTests(unittest.TestCase):
+    def testImportingStringRule(self):
+        variants = [
+            'token string keyword:if = "if"; token string keyword:else = "else";',
+            "token string keyword:if = 'if'; token string keyword:else = 'else';",
+        ]
+        lxr = (tartak.lexer.Lexer().append(tartak.lexer.StringRule(group='keyword', name='if', pattern='if'))
+                                   .append(tartak.lexer.StringRule(group='keyword', name='else', pattern='else'))
+               )
+        for string in variants:
+            self.assertEqual(lxr, tartak.lexer.Importer(string).make().lexer())
+
+    def testImportingRegexRule(self):
+        variants = [
+            'token regex integer:dec = "(0|[1-9][0-9]*)";',
+            "token regex integer:dec = '(0|[1-9][0-9]*)';",
+        ]
+        lxr = tartak.lexer.Lexer().append(tartak.lexer.RegexRule(group='integer', name='dec', pattern='(0|[1-9][0-9]*)'))
+        for string in variants:
+            self.assertEqual(lxr, tartak.lexer.Importer(string).make().lexer())
+
+    def testImportingFlag(self):
+        variants = [
+            'flag string_dbl_triple = true;',
+        ]
+        lxr = tartak.lexer.Lexer()
+        lxr.setFlag('string-dbl-triple', True)
+        for string in variants:
+            self.assertEqual(lxr, tartak.lexer.Importer(string).make().lexer())
+
+    def testImportingBackslashRule(self):
+        variants = [
+            'token string backslash = "\\";',
+        ]
+        lxr = tartak.lexer.Lexer().append(tartak.lexer.StringRule(name='backslash', pattern='\\'))
+        for string in variants:
+            self.assertEqual(lxr, tartak.lexer.Importer(string).make().lexer())
 
 
 if __name__ == '__main__':
