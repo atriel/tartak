@@ -3,7 +3,7 @@
 import re
 import warnings
 
-from .errors import LexerError
+from .errors import LexerError, EmptyRuleError, ParserError
 from .tokens import Token, TokenStream
 
 
@@ -15,16 +15,17 @@ class LexerRule:
     """
     def __init__(self, pattern, name, group=None):
         self._group, self._name = (group if group is not None else name), name
+        if pattern == '': raise EmptyRuleError('pattern for cannot be empty')
         self._pattern = pattern
         self._type = None
 
     def __eq__(self, other):
         return self.data() == other.data()
 
-    def ttype(self):
+    def type(self):
         return self._name
 
-    def tgroup(self):
+    def group(self):
         return self._group
 
     def pattern(self):
@@ -81,6 +82,134 @@ class RegexRule(LexerRule):
         return (matched.group() if matched is not None else None)
 
 
+# Exporting and importing lexer files (*.lexer)
+class Exporter:
+    def __init__(self, lexer):
+        self._lexer = lexer
+        self._string = ''
+
+    def export(self):
+        """Exports Lexer objects into .lexer files.
+        """
+        lines = []
+        for r in self._lexer.rules():
+            line = 'token {0} {1}:{2} = "{3}";'.format(('string' if type(r) == StringRule else 'regex'), r.group(), r.type(), r.pattern())
+            lines.append(line)
+        self._string = '\n'.join(lines)
+        return self
+
+    def str(self):
+        """Return exported string.
+        """
+        return self._string
+
+
+class Importer:
+    def __init__(self, string=''):
+        self._string = string
+        self._lexer, self._made = None, None
+
+    def feed(self, s):
+        """Feed string to be imported as lexer rules.
+        """
+        self._string = s
+        return self
+
+    def _makelex(self):
+        self._lexer = Lexer()
+        (self._lexer.append(StringRule(group='keyword', name='token', pattern='token'))
+                    .append(StringRule(group='keyword', name='flag', pattern='flag'))
+                    .append(StringRule(group='type', name='string', pattern='string'))
+                    .append(StringRule(group='type', name='regex', pattern='regex'))
+                    .append(StringRule(group='bool', name='true', pattern='true'))
+                    .append(StringRule(group='bool', name='false', pattern='false'))
+                    .append(StringRule(group='operator', name='assign', pattern='='))
+                    .append(StringRule(group='operator', name='semicolon', pattern=';'))
+                    .append(StringRule(group='operator', name='colon', pattern=':'))
+                    .append(StringRule(group='operator', name='percent', pattern=';'))
+                    .append(RegexRule(group='name', name='name', pattern='[_a-zA-Z][_a-zA-Z0-9]*'))
+                    .append(RegexRule(group='comment', name='line', pattern='#.*'))
+         )
+
+    def make(self):
+        """Makes lexer from string.
+        """
+        self._makelex()
+        self._made = Lexer()
+        tokens = self._lexer.feed(self._string).tokenize().tokens().remove(group='comment')
+        rules = []
+        flags = []
+        i = 0
+        while i < len(tokens):
+            token = tokens[i]
+            if token.type() == 'token':
+                t_group, t_name, t_class, t_pattern = None, None, None, None
+                if i+1 < len(tokens) and tokens[i+1].type() in ['string', 'regex']:
+                    if i+2 < len(tokens) and tokens[i+2].type() == 'name':
+                        if i+3 < len(tokens) and tokens[i+3].type() == 'colon':
+                            if i+4 < len(tokens) and tokens[i+4].type() == 'name':
+                                if i+5 < len(tokens) and tokens[i+5].type() == 'assign':
+                                    if i+6 < len(tokens) and tokens[i+6].group() == 'string':
+                                        if i+7 < len(tokens) and tokens[i+7].type() == 'semicolon':
+                                            t_group = tokens[i+2].value()
+                                            t_name = tokens[i+4].value()
+                                            t_class = tokens[i+1].value()
+                                            t_pattern = tokens[i+6]
+                                            i += 7
+                        elif i+3 < len(tokens) and tokens[i+3].type() == 'assign':
+                            if i+4 < len(tokens) and tokens[i+4].group() == 'string':
+                                if i+5 < len(tokens) and tokens[i+5].type() == 'semicolon':
+                                    t_group = tokens[i+2].value()
+                                    t_name = tokens[i+2].value()
+                                    t_class = tokens[i+1].value()
+                                    t_pattern = tokens[i+4]
+                                    i += 5
+                if t_class is None:
+                    msg = 'invalid syntax: starting on line {0}, character {1}\n'.format(token.line(), token.char())
+                    msg += self._lexer.getline(token.line(), rebuild=True)
+                    msg += '\n'
+                    msg += '-'*token.char() + '^'
+                    raise ParserError(msg)
+                else:
+                    t_pattern = (t_pattern.value()[3:-3] if t_pattern.type().endswith('triple') else t_pattern.value()[1:-1])
+                    rule = (StringRule if t_class == 'string' else RegexRule)(pattern=t_pattern, name=t_name, group=t_group)
+                    rules.append(rule)
+            elif token.type() == 'flag':
+                flag, value = None, None
+                if tokens[i+1].type() == 'name':
+                    if tokens[i+2].type() == 'assign' and tokens[i+2].group() == 'operator':
+                        if tokens[i+3].group() in ['bool', 'string']:
+                            if tokens[i+4].type() == 'semicolon':
+                                flag = tokens[i+1].value().replace('_', '-')
+                                if tokens[i+3].value() == 'true': value = True
+                                elif tokens[i+3].value() == 'false': value = False
+                                else:
+                                    value = (tokens[i+3].value()[3:-3] if tokens[i+3].type().endswith('triple') else tokens[i+3].value()[1:-1])
+                                i += 4
+                if flag is None:
+                    msg = 'invalid syntax: starting on line {0}, character {1}\n'.format(token.line(), token.char())
+                    msg += self._lexer.getline(token.line(), rebuild=True)
+                    msg += '\n'
+                    msg += '-'*token.char() + '^'
+                    raise ParserError(msg)
+                else:
+                    flags.append( (flag, value) )
+            else:
+                msg = 'invalid syntax: starting on line {0}, character {1}\n'.format(token.line(), token.char())
+                msg += self._lexer.getline(token.line(), rebuild=True)
+                msg += '\n'
+                msg += '-'*token.char() + '^'
+                raise ParserError(msg)
+            i += 1
+        for rule in rules: self._made.append(rule)
+        for flag, value in flags: self._made.setFlag(flag, value)
+        return self
+
+    def lexer(self):
+        return self._made
+
+
+
 # Lexer
 class Lexer:
     """Lexer class.
@@ -95,6 +224,7 @@ class Lexer:
             'string-double': True,
             'string-dbl-triple': False,
             'string-sgl-triple': False,
+            'newline': '\n',
         }
 
     def __iter__(self):
@@ -126,6 +256,11 @@ class Lexer:
         self._flags[flag] = value
         return self
 
+    def rules(self):
+        """Returns lexer's list of rules.
+        """
+        return self._rules
+
     def _matchWhitespace(self, string):
         return (string and string[0].strip() == '')
 
@@ -134,15 +269,15 @@ class Lexer:
         """
         token, t_type, t_group = None, None, None
         while string and string[0].strip() == '':
-            if string[0] == '\n':
+            if string.startswith(self._flags['newline']):
                 if token is not None:
                     self._raw.append(Token(self._line, self._char, token, t_type, t_group))
                     if indent: self._tokens.append(Token(self._line, self._char, token, t_type, t_group))
-                token, t_type, t_group = string[0], 'newline', 'whitespace'
-                string = string[1:]
+                token, t_type, t_group = self._flags['newline'], 'newline', 'whitespace'
+                string = string[len(self._flags['newline']):]
                 self._raw.append(Token(self._line, self._char, token, t_type, t_group))
                 token, t_type, t_group = None, None, None
-                self._line += 1
+                self._line += len(self._flags['newline'])
                 self._char = 0
             elif string[0] == '\t':
                 t_type, t_group = 'tab', 'whitespace'
@@ -182,14 +317,25 @@ class Lexer:
                     closed = True
                     break
             if char == '\n' and quote not in ['"""', "'''"]:
-                report =  'broken string on line {0} (displaying 128 following characters)\n'
-                report += '{0}'.format(original[:128])
+                line = self._string.splitlines()[self._line]
+                report =  'broken string on line {0}, character {1}:\n'.format(self._line+1, self._char+1)
+                report += line + '\n'
+                report += '{0}^'.format('-'*(self._char+(len(match) if match is not None else 1)))
                 raise LexerError(report)
             if char == '\n' and  quote in ['"""', "'''"]:
                 self._line += 1
                 self._char = 0
             match += char
         match = (match if closed else None)
+        return match
+
+    def _matchAnyString(self, s):
+        match = False
+        for str_type_start, str_type_name in [('"""', 'string-dbl-triple'), ("'''", 'string-sgl-triple'), ('"', 'string-double'), ("'", 'string-single')]:
+            if s.startswith(str_type_start) and self._flags[str_type_name]:
+                if self._matchString(s, str_type_start) is not None:
+                    match = True
+                    break
         return match
 
     def _consumeString(self, s):
@@ -213,15 +359,15 @@ class Lexer:
         for r in self._rules:
             token = r.match(s)
             if token is not None:
-                t_type = r.ttype()
-                t_group = r.tgroup()
+                t_type = r.type()
+                t_group = r.group()
                 break
         return (t_group, t_type, token)
 
     def _consumeInvalid(self, s, errors='throw'):
         t_group, t_type, token = None, None, None
         invalid = ''
-        while (not self._matchRule(s) and not self._matchWhitespace(s) and not self._matchString(s, '"') and not self._matchString(s, '"""') and not self._matchString(s, "'") and not self._matchString(s, "'''") and s):
+        while (not self._matchRule(s) and not self._matchWhitespace(s) and not self._matchAnyString(s) and s):
             invalid += s[0]
             s = s[1:]
         if token is None:
@@ -244,12 +390,16 @@ class Lexer:
         while string:
             string = self._consumeWhitespace(string, indent)
             if not string: break
-            t_group, t_type, token = self._consumeString(string)
-            if token is None: t_group, t_type, token = self._consumeRule(string)
-            if token is None: t_group, t_type, token = self._consumeInvalid(string, errors)
-            string = string[len(token):]
+            t_group, t_type, match = self._consumeString(string)
+            if match is None: t_group, t_type, match = self._consumeRule(string)
+            if match is None: t_group, t_type, match = self._consumeInvalid(string, errors)
+            string = string[len(match):]
+            if t_group == 'string':
+                token = match.replace('\\n', '\n').replace('\\\\', '\\').replace('\\t', '\t').replace('\\r', '\r')
+            else:
+                token = match
             t = Token(self._line, self._char, token, t_type, t_group)
-            self._char += len(t.value())
+            self._char += len(match)
             if t_group == 'tartak' and t_type == 'drop': continue
             self._tokens.append(t)
             self._raw.append(t)
@@ -259,6 +409,21 @@ class Lexer:
         """Return generated tokens.
         """
         return (self._tokens if not raw else self._raw)
+
+    def getline(self, n, rebuild=False):
+        """If rebuild is True, return string containing given line number.
+        Else, return tokens found in this line.
+        """
+        toks = []
+        if self._raw[-1].line() < n: return IndexError('line number too high: {0}'.format(n))
+        for t in self._raw:
+            if t.line() > n: break
+            if t.line() == n: toks.append(t)
+        if rebuild:
+            line = ''.join([t.value() for t in toks])
+        else:
+            line = toks
+        return line
 
     def dumps(self):
         """Return lexer state as JSON-serializable dict.
@@ -278,3 +443,8 @@ class Lexer:
             self.append( rule(**i) )
         self._flags = state['flags']
         return self
+
+    def export(self):
+        """Exports lexer rules to string which can be written to a file.
+        """
+        return Exporter(self).export().str()
