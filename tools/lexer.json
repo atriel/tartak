@@ -48,6 +48,12 @@
     },
     "commands": {
         "lex": {
+            "doc": {
+                "help": "Mode used to lex files according to given lexing rules. It takes two to three operands.\nFirst operand (<rules>) tells Tartak which set of rules to use, it can be a name of predefined set (i.g. 'py', 'python' or 'c++').\nSecond operand (<input>) is path to the file which shall be tokenized.\nThird operand (<output>) is an optional path to the output file, in case it is omitted Tartak will default to creating 'a.tokens' file in current working directory.",
+                "usage": [
+                    "lex [--syntax-check] <rules> <input> [<output>]"
+                ]
+            },
             "options": {
                 "local": [
                     {

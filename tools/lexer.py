@@ -178,6 +178,7 @@ if LEXER_RULES == 'py' or LEXER_RULES == 'python' or LEXER_RULES == 'default':
 
     lexer.append(tartak.lexer.StringRule(group='operator', name='or', pattern='|'))
     lexer.append(tartak.lexer.StringRule(group='operator', name='and', pattern='&'))
+    lexer.append(tartak.lexer.StringRule(group='operator', name='caret', pattern='^'))
 
     lexer.append(tartak.lexer.StringRule(group='operator', name='linecont', pattern='\\'))
 
@@ -274,10 +275,10 @@ else:
     if not os.path.isfile(LEXER_RULES):
         print('fatal: {0} does not point to a file and does not name a predefined set'.format(repr(LEXER_RULES)))
         exit(3)
-
+    with open(LEXER_RULES, 'r') as ifstream:
+        lexer = tartak.lexer.Importer().feed(ifstream.read()).make().lexer()
 try:
     with open(INPUT, 'r') as ifstream: string = ifstream.read()
-
     lexer.feed(string).tokenize(errors=ERRORS)
     if not JUST_CHECK_SYNTAX:
         out = json.dumps(lexer.tokens().dumps())
