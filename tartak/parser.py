@@ -4,7 +4,7 @@ import json
 import sys
 import re
 
-from . import lexer
+from . import lexer, tokens
 
 
 DEBUG = False
@@ -24,16 +24,16 @@ def serialise(pattern):
         if i < len(pattern)-1: serialised += ' '
     return serialised
 
-def _tokenise(pattern):
-    tknzr = tokenizer.Tokenizer(pattern)
-    tknzr.addRule(name='token', rule='[a-zA-Z][a-zA-Z0-9]*(-[a-zA-Z][a-zA-Z0-9]*)*', group='tokens', type='regex')
-    tknzr.addRule(name='wildcart', rule='*', group='quantifier', type='string')
-    tknzr.addRule(name='optional', rule='?', group='quantifier', type='string')
-    tknzr.addRule(name='plus', rule='+', group='quantifier', type='string')
-    tknzr.addRule(name='lparen', rule='(', group='parens', type='string')
-    tknzr.addRule(name='rparen', rule=')', group='parens', type='string')
-    tokens = tknzr.tokenize().tokens()
-    return tokens
+def _tokenize(pattern):
+    lxr = lexer.Lexer()
+    (lxr.append(tokens.RegexRule(name='token', pattern='[a-zA-Z][a-zA-Z0-9]*(-[a-zA-Z][a-zA-Z0-9]*)*', group='tokens', type='regex'))
+        .append(tokens.StringRule(name='wildcart', pattern='*', group='quantifier', type='string'))
+        .append(tokens.StringRule(name='optional', pattern='?', group='quantifier', type='string'))
+        .append(tokens.StringRule(name='plus', pattern='+', group='quantifier', type='string'))
+        .append(tokens.StringRule(name='lparen', pattern='(', group='parens', type='string'))
+        .append(tokens.StringRule(name='rparen', pattern=')', group='parens', type='string'))
+        )
+    return lxr.feed(pattern).tokenize().tokens()
 
 def _closingafter(tokens):
     """Returns number of tokens until the left parenthesis is closed.
@@ -88,19 +88,6 @@ def deserialize(pattern):
         if err is not None: raise type(err)('{0}: {1}'.format(str(err), pattern))
     return deserialised
 
-def deserialise(pattern): return deserialize(pattern)
-
-
-def getline(no, tokens):
-    line = []
-    for i in tokens:
-        if i[0] == no: line.append(i)
-    return line
-
-def rebuild(line):
-    s = ''
-    s = ' '.join([i[-1] for i in line]).strip()
-    return s
 
 def match(rule, tokens):
     """Tries to match rule to the beginning of the list of tokens and returns number of tokens matched.
@@ -142,7 +129,7 @@ def match(rule, tokens):
     return (matched, no)
 
 
-class Parser:
+class OldParser:
     def __init__(self, tokens=[]):
         self._rules, self._order = {}, []
         self._tokens = tokens
@@ -210,7 +197,35 @@ class Parser:
         return self
 
 
-class NewParser:
+# New code begins here, above functions and classes SHOULD NOT be used
+class Rule:
+    def __init__(self):
+        self._items = []
+
+    def append(self, item, what, quantity=''):
+        """Append item to a rule.
+        """
+        self._items.append(item)
+        return self
+
+    def match(self, tokens):
+        """Returns matched tokens, or None if rule does not match the beggining of token stream.
+        """
+        match = None
+        # TODO: implement logic...
+        return match
+
+    def consume(self, tokens):
+        """Returns two-tuple: (matched-tokens, rest-of-token-stream).
+        Should be called after a successful call to .match() as it will modify token stream.
+        """
+        match = []
+        # TODO: implement logic...
+        tokens = tokens[len(match):]
+        return (match, tokens)
+
+
+class Parser:
     def __init__(self, lexer):
         self._lexrules = lexer._rules
         self._rules = {}
@@ -218,4 +233,8 @@ class NewParser:
 
     def append(self, *args, **kwargs):
         # TODO
-        pass
+        return self
+
+    def parse(self):
+        # TODO
+        return self
