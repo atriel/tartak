@@ -14,8 +14,8 @@ import tartak
 
 
 # Helper functions
-def getDefaultLexer(string):
-    lxr = tartak.lexer.Lexer(string)
+def getDefaultLexer(string=''):
+    lxr = tartak.lexer.Lexer(string=string)
     (lxr.append(tartak.lexer.StringRule(pattern='if', name='if', group='keyword'))
         .append(tartak.lexer.StringRule(pattern='pass', name='pass', group='keyword'))
         .append(tartak.lexer.RegexRule(pattern='[a-zA-Z_][a-zA-Z0-9_]*', name='name', group='name'))
@@ -34,7 +34,7 @@ def readfile(path):
     return string
 
 
-# Logic code
+# Tests logic code
 class LexerTests(unittest.TestCase):
     def testLexingSingleKeyword(self):
         string = 'if'
@@ -135,7 +135,7 @@ class LexerTests(unittest.TestCase):
         tokens = lexer.tokenize(errors='save').tokens()
         self.assertEqual('string', tokens[2].group())
         self.assertEqual('single', tokens[2].type())
-        self.assertEqual("'string'", tokens[2].value())
+        self.assertEqual('string', tokens[2].value())
 
     def testLexingDoublequotedString(self):
         string = 's = "string"'
@@ -143,7 +143,7 @@ class LexerTests(unittest.TestCase):
         tokens = lexer.tokenize(errors='save').tokens()
         self.assertEqual('string', tokens[2].group())
         self.assertEqual('double', tokens[2].type())
-        self.assertEqual('"string"', tokens[2].value())
+        self.assertEqual('string', tokens[2].value())
 
     def testLexingTripleSinglequotedString(self):
         string = """s = '''string
@@ -152,7 +152,7 @@ class LexerTests(unittest.TestCase):
         tokens = lexer.tokenize(errors='save').tokens()
         self.assertEqual('string', tokens[2].group())
         self.assertEqual('triple', tokens[2].type())
-        self.assertEqual("'''string\n        '''", tokens[2].value())
+        self.assertEqual('string\n        ', tokens[2].value())
 
     def testLexingTripleDoublequotedString(self):
         string = '''s = """string
@@ -161,7 +161,7 @@ class LexerTests(unittest.TestCase):
         tokens = lexer.tokenize(errors='save').tokens()
         self.assertEqual('string', tokens[2].group())
         self.assertEqual('triple', tokens[2].type())
-        self.assertEqual('"""string\n        """', tokens[2].value())
+        self.assertEqual('string\n        ', tokens[2].value())
 
 
 class LexerExporterTests(unittest.TestCase):
@@ -206,11 +206,81 @@ class LexerImporterTests(unittest.TestCase):
 
     def testImportingBackslashRule(self):
         variants = [
-            'token string backslash = "\\";',
+            'token string backslash = "\\\\";',
         ]
         lxr = tartak.lexer.Lexer().append(tartak.lexer.StringRule(name='backslash', pattern='\\'))
         for string in variants:
             self.assertEqual(lxr, tartak.lexer.Importer(string).make().lexer())
+
+
+class ParserInitialSimpleTests(unittest.TestCase):
+    def testMacthingSimpleStringLiteral(self):
+        string = '"foo"'
+        tokens = getDefaultLexer().feed(string).tokenize().tokens()
+        parser = tartak.parser.Parser(getDefaultLexer())
+        variants = [
+            [
+                {
+                    'type': 'string',
+                    'quantifier': None,
+                    'not': False,
+                    'value': ['foo'],
+                },
+            ],
+        ]
+        for rule in variants:
+            self.assertTrue(parser.tryrule(rule, tokens))
+
+    def testMacthingSimpleStringGroup(self):
+        string = '"foo"'
+        tokens = getDefaultLexer().feed(string).tokenize().tokens()
+        parser = tartak.parser.Parser(getDefaultLexer())
+        variants = [
+            [
+                {
+                    'type': 'identifier',
+                    'quantifier': None,
+                    'not': False,
+                    'value': ['string:'],
+                },
+            ],
+        ]
+        for rule in variants:
+            self.assertTrue(parser.tryrule(rule, tokens))
+
+    def testMacthingSimpleStringFullIdentifier(self):
+        string = '"foo"'
+        tokens = getDefaultLexer().feed(string).tokenize().tokens()
+        parser = tartak.parser.Parser(getDefaultLexer())
+        variants = [
+            [
+                {
+                    'type': 'identifier',
+                    'quantifier': None,
+                    'not': False,
+                    'value': ['string:double'],
+                },
+            ],
+        ]
+        for rule in variants:
+            self.assertTrue(parser.tryrule(rule, tokens))
+
+    def testMacthingSimpleStringTokenType(self):
+        string = '"foo"'
+        tokens = getDefaultLexer().feed(string).tokenize().tokens()
+        parser = tartak.parser.Parser(getDefaultLexer())
+        variants = [
+            [
+                {
+                    'type': 'identifier',
+                    'quantifier': None,
+                    'not': False,
+                    'value': ['double'],
+                },
+            ],
+        ]
+        for rule in variants:
+            self.assertTrue(parser.tryrule(rule, tokens))
 
 
 if __name__ == '__main__':
