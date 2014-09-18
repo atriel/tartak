@@ -15,7 +15,7 @@ class LexerRule:
     """
     def __init__(self, pattern, name, group=None):
         self._group, self._name = (group if group is not None else name), name
-        if pattern == '': raise EmptyRuleError('pattern for cannot be empty')
+        if pattern == '': raise EmptyRuleError('pattern for cannot be empty -> {0}:{1} = {2}'.format(group, name, repr(pattern)))
         self._pattern = pattern
         self._type = None
 
@@ -171,7 +171,7 @@ class Importer:
                     msg += '-'*token.char() + '^'
                     raise ParserError(msg)
                 else:
-                    t_pattern = (t_pattern.value()[3:-3] if t_pattern.type().endswith('triple') else t_pattern.value()[1:-1])
+                    t_pattern = t_pattern.value()
                     rule = (StringRule if t_class == 'string' else RegexRule)(pattern=t_pattern, name=t_name, group=t_group)
                     rules.append(rule)
             elif token.type() == 'flag':
@@ -184,7 +184,7 @@ class Importer:
                                 if tokens[i+3].value() == 'true': value = True
                                 elif tokens[i+3].value() == 'false': value = False
                                 else:
-                                    value = (tokens[i+3].value()[3:-3] if tokens[i+3].type().endswith('triple') else tokens[i+3].value()[1:-1])
+                                    value = tokens[i+3].value()
                                 i += 4
                 if flag is None:
                     msg = 'invalid syntax: starting on line {0}, character {1}\n'.format(token.line(), token.char())
@@ -398,11 +398,15 @@ class Lexer:
                 token = match.replace('\\n', '\n').replace('\\\\', '\\').replace('\\t', '\t').replace('\\r', '\r')
             else:
                 token = match
-            t = Token(self._line, self._char, token, t_type, t_group)
             self._char += len(match)
+            if t_group == 'string':
+                if t_type in ['double', 'single']:
+                    token = token[1:-1]
+                else:
+                    token = token[3:-3]
             if t_group == 'tartak' and t_type == 'drop': continue
-            self._tokens.append(t)
-            self._raw.append(t)
+            self._tokens.append(Token(self._line, self._char, token, t_type, t_group))
+            self._raw.append(Token(self._line, self._char, match, t_type, t_group))
         return self
 
     def tokens(self, raw=False):
