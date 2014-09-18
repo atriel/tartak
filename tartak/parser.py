@@ -238,3 +238,20 @@ class Parser:
     def parse(self):
         # TODO
         return self
+
+    @classmethod
+    def tryrule(self, rule, tokens):
+        match = False
+        i = 0
+        for item in rule:
+            ok = False
+            if item['type'] == 'string':
+                match = (item['value'][0] == tokens[i].value())
+            elif item['type'] == 'identifier' and ':' in item['value'][0]:
+                t_group, t_type = item['value'][0].split(':')
+                match = ((t_group == tokens[i].group()) and (t_type == tokens[i].type() if t_type else True))
+            elif item['type'] == 'identifier' and ':' not in item['value'][0]:
+                match = item['value'][0] == tokens[i].type()
+            if not match:
+                break
+        return match
