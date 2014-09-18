@@ -254,4 +254,5 @@ class Parser:
                 match = item['value'][0] == tokens[i].type()
             if not match:
                 break
+            i += 1
         return match

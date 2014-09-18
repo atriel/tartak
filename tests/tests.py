@@ -14,7 +14,7 @@ import tartak
 
 
 # Helper functions
-def getDefaultLexer(string=''):
+def getDefaultLexer(string='', triple_strings=False):
     lxr = tartak.lexer.Lexer(string=string)
     (lxr.append(tartak.lexer.StringRule(pattern='if', name='if', group='keyword'))
         .append(tartak.lexer.StringRule(pattern='pass', name='pass', group='keyword'))
@@ -26,6 +26,9 @@ def getDefaultLexer(string=''):
         .append(tartak.lexer.RegexRule(pattern='0x[0-9a-fA-F]+', name='hex', group='int'))
         .append(tartak.lexer.RegexRule(pattern='0o[0-7]+', name='oct', group='int'))
         )
+    if triple_strings:
+        lxr.setFlag('string-dbl-triple')
+        lxr.setFlag('string-sgl-triple')
     return lxr
 
 
@@ -276,6 +279,35 @@ class ParserInitialSimpleTests(unittest.TestCase):
                     'quantifier': None,
                     'not': False,
                     'value': ['double'],
+                },
+            ],
+        ]
+        for rule in variants:
+            self.assertTrue(parser.tryrule(rule, tokens))
+
+    def testMacthingStringLiterals(self):
+        string = '"foo" "bar" """baz"""'
+        tokens = getDefaultLexer(triple_strings=True).feed(string).tokenize().tokens()
+        parser = tartak.parser.Parser(getDefaultLexer())
+        variants = [
+            [
+                {
+                    'type': 'string',
+                    'quantifier': None,
+                    'not': False,
+                    'value': ['foo'],
+                },
+                {
+                    'type': 'string',
+                    'quantifier': None,
+                    'not': False,
+                    'value': ['bar'],
+                },
+                {
+                    'type': 'string',
+                    'quantifier': None,
+                    'not': False,
+                    'value': ['baz'],
                 },
             ],
         ]
