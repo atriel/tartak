@@ -230,49 +230,80 @@ class Parser:
         match = False
         i = 0
         for item in rule:
-            ok = False
-            if item['type'] == 'string':
-                match = (item['value'][0] == tokens[i].value())
-            elif item['type'] == 'identifier' and ':' in item['value'][0]:
-                t_group, t_type = item['value'][0].split(':')
-                match = ((t_group == tokens[i].group()) and (t_type == tokens[i].type() if t_type else True))
-            elif item['type'] == 'identifier' and ':' not in item['value'][0]:
-                match = item['value'][0] == tokens[i].type()
-            if not match:
-                break
+            quantifier = item['quantifier']
+            if quantifier is None:
+                if not tokens:
+                    raise errors.EndOfTokenStreamError('unexpected end of token stream')
+                if item['type'] == 'string':
+                    match = (item['value'][0] == tokens[i].value())
+                elif item['type'] == 'identifier' and ':' in item['value'][0]:
+                    t_group, t_type = item['value'][0].split(':')
+                    match = ((t_group == tokens[i].group()) and (t_type == tokens[i].type() if t_type else True))
+                elif item['type'] == 'identifier' and ':' not in item['value'][0]:
+                    match = item['value'][0] == tokens[i].type()
+            elif quantifier == '*':
+                match = True
+                if item['type'] == 'string':
+                    while tokens and i < len(tokens) and item['value'][0] == tokens[i].value(): i += 1
+                elif item['type'] == 'identifier' and ':' in item['value']:
+                    t_group, t_type = item['value'][i].split(':')
+                    while tokens and i < len(tokens) and ((t_group == tokens[i].group()) and (t_type == tokens[i].type() if t_type else True)): i += 1
+            elif quantifier == '+':
+                if not tokens:
+                    raise errors.EndOfTokenStreamError('unexpected end of token stream')
+                if item['type'] == 'string':
+                    if item['value'][0] == tokens[i].value():
+                        match = True
+                        i += 1
+                    while match and tokens and i < len(tokens) and item['value'][0] == tokens[i].value(): i += 1
+                elif item['type'] == 'identifier' and ':' in item['value'][0]:
+                    t_group, t_type = item['value'][0].split(':')
+                    if ((t_group == tokens[i].group()) and (t_type == tokens[i].type() if t_type else True)):
+                        match = True
+                        i += 1
+                    while match and tokens and i < len(tokens) and ((t_group == tokens[i].group()) and (t_type == tokens[i].type() if t_type else True)): i += 1
+            if not match: break
             i += 1
         return match
 
     @classmethod
     def matchrule(self, rule, tokens):
         matched = []
+        left = tokens.copy()
         for item in rule:
             if item['quantifier'] is None:
                 if item['type'] == 'string':
-                    match = (item['value'][0] == tokens[0].value())
+                    match = (item['value'][0] == left[0].value())
                 elif item['type'] == 'identifier' and ':' in item['value'][0]:
                     t_group, t_type = item['value'][0].split(':')
-                    match = ((t_group == tokens[i].group()) and (t_type == tokens[0].type() if t_type else True))
+                    match = ((t_group == left[0].group()) and (t_type == left[0].type() if t_type else True))
                 elif item['type'] == 'identifier' and ':' not in item['value'][0]:
-                    match = item['value'][0] == tokens[0].type()
+                    match = item['value'][0] == left[0].type()
                 else:
                     raise Exception('rule did not match')
-            elif item['quantifier'] == '+':
-                if not tokens:
-                    raise errors.EndOfTokenStreamError('unexpected end of token stream')
-                sub = []
-                if item['type'] == 'string':
-                    if item['value'][0] == tokens[0].value():
-                        sub.append(tokens.pop())
-                    else:
-                        raise Exception('rule did not match')
-                    while tokens and item['value'][0] == tokens[0].value():
-                        sub.append(tokens.pop())
-                matched.extend(sub)
+                if match: matched.append(left.pop())
             elif item['quantifier'] == '*':
                 sub = []
                 if item['type'] == 'string':
-                    while tokens and item['value'][0] == tokens[0].value():
-                        sub.append(tokens.pop())
+                    while left and item['value'][0] == left[0].value():
+                        sub.append(left.pop())
+                elif item['type'] == 'identifier' and ':' in item['value'][0]:
+                    t_group, t_type = item['value'][0].split(':')
+                    while left and ((t_group == left[0].group()) and (t_type == left[0].type() if t_type else True)):
+                        sub.append(left.pop())
                 matched.extend(sub)
-        return (matched, tokens)
+            elif item['quantifier'] == '+':
+                if not left:
+                    raise errors.EndOfTokenStreamError('unexpected end of token stream')
+                sub = []
+                if item['type'] == 'string':
+                    if item['value'][0] == left[0].value(): sub.append(left.pop())
+                    else: raise Exception('rule did not match')
+                    while left and item['value'][0] == left[0].value(): sub.append(left.pop())
+                elif item['type'] == 'identifier' and ':' in item['value'][0]:
+                    t_group, t_type = item['value'][0].split(':')
+                    if ((t_group == left[0].group()) and (t_type == left[0].type() if t_type else True)): sub.append(left.pop())
+                    else: raise Exception('rule did not match')
+                    while left and ((t_group == left[0].group()) and (t_type == left[0].type() if t_type else True)): sub.append(left.pop())
+                matched.extend(sub)
+        return (matched, left)
