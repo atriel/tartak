@@ -275,7 +275,7 @@ class TokenStreamTests(unittest.TestCase):
         self.assertEqual('foo', tokens.get(0).value())
 
 
-class ParserMatchingTests(unittest.TestCase):
+class ParserSimpleMatchingTests(unittest.TestCase):
     def testMatchingByStringLiteral(self):
         string = '"foo"'
         tokens = getDefaultLexer().feed(string).tokenize().tokens()
@@ -352,7 +352,6 @@ class ParserMatchingTests(unittest.TestCase):
             self.assertTrue(matched)
             self.assertEqual(count, 1)
 
-    @unittest.skip('')
     def testMatchingMultitokenRules(self):
         string = '"foo" \'bar\' """baz"""'
         tokens = getDefaultLexer(triple_strings=True).feed(string).tokenize().tokens()
@@ -363,19 +362,19 @@ class ParserMatchingTests(unittest.TestCase):
                     'type': 'string',
                     'quantifier': None,
                     'not': False,
-                    'value': ['foo'],
+                    'value': 'foo',
                 },
                 {
                     'type': 'string',
                     'quantifier': None,
                     'not': False,
-                    'value': ['bar'],
+                    'value': 'bar',
                 },
                 {
                     'type': 'string',
                     'quantifier': None,
                     'not': False,
-                    'value': ['baz'],
+                    'value': 'baz',
                 },
             ],
             [ # rule no. 2, by token group
@@ -383,19 +382,19 @@ class ParserMatchingTests(unittest.TestCase):
                     'type': 'identifier',
                     'quantifier': None,
                     'not': False,
-                    'value': ['string:'],
+                    'value': 'string:',
                 },
                 {
                     'type': 'identifier',
                     'quantifier': None,
                     'not': False,
-                    'value': ['string:'],
+                    'value': 'string:',
                 },
                 {
                     'type': 'identifier',
                     'quantifier': None,
                     'not': False,
-                    'value': ['string:'],
+                    'value': 'string:',
                 },
             ],
             [ # rule no. 3, by token type
@@ -403,19 +402,19 @@ class ParserMatchingTests(unittest.TestCase):
                     'type': 'identifier',
                     'quantifier': None,
                     'not': False,
-                    'value': ['double'],
+                    'value': 'double',
                 },
                 {
                     'type': 'identifier',
                     'quantifier': None,
                     'not': False,
-                    'value': ['single'],
+                    'value': 'single',
                 },
                 {
                     'type': 'identifier',
                     'quantifier': None,
                     'not': False,
-                    'value': ['triple'],
+                    'value': 'triple',
                 },
             ],
             [ # rule no. 4, by full token identifier
@@ -423,19 +422,19 @@ class ParserMatchingTests(unittest.TestCase):
                     'type': 'identifier',
                     'quantifier': None,
                     'not': False,
-                    'value': ['string:double'],
+                    'value': 'string:double',
                 },
                 {
                     'type': 'identifier',
                     'quantifier': None,
                     'not': False,
-                    'value': ['string:single'],
+                    'value': 'string:single',
                 },
                 {
                     'type': 'identifier',
                     'quantifier': None,
                     'not': False,
-                    'value': ['string:triple'],
+                    'value': 'string:triple',
                 },
             ],
             [ # rule no. 5, by token group and quantifier *
@@ -443,7 +442,7 @@ class ParserMatchingTests(unittest.TestCase):
                     'type': 'identifier',
                     'quantifier': '*',
                     'not': False,
-                    'value': ['string:'],
+                    'value': 'string:',
                 },
             ],
             [ # rule no. 6, by token group and quantifier +
@@ -451,17 +450,17 @@ class ParserMatchingTests(unittest.TestCase):
                     'type': 'identifier',
                     'quantifier': '+',
                     'not': False,
-                    'value': ['string:'],
+                    'value': 'string:',
                 },
             ],
         ]
         for rule in variants:
             values = []
-            result = parser.matchrule(rule, tokens)
-            if not result or DEBUG:
-                print('{0}{1}'.format(('(DEBUG) ' if DEBUG and result else ''), rule))
-            self.assertTrue(result)
-            self.assertEqual(['foo', 'bar', 'baz'], [i.value() for i in parser.consumerule(rule, tokens)[0]])
+            matched, count = parser.matchrule(rule, tokens)
+            if not matched or DEBUG:
+                print('{0}{1}'.format(('(DEBUG) ' if DEBUG and matched else ''), rule))
+            self.assertTrue(matched)
+            self.assertEqual(count, 3)
 
     def testMatchingStringQuantifierStar(self):
         string = '"foo" "foo"'
@@ -716,6 +715,8 @@ class ParserMatchingTests(unittest.TestCase):
             self.assertTrue(matched)
             self.assertEqual(count, 0)
 
+
+class ParserAlternativeMatchingTests(unittest.TestCase):
     @unittest.skip('')
     def testMatchingAlternatives(self):
         string = '"foo"'
