@@ -241,6 +241,10 @@ class Parser:
                     match = ((t_group == tokens[i].group()) and (t_type == tokens[i].type() if t_type else True))
                 elif item['type'] == 'identifier' and ':' not in item['value'][0]:
                     match = item['value'][0] == tokens[i].type()
+                elif item['type'] == 'alternative':
+                    for j, altrule in enumerate(item['value']):
+                        match = Parser.tryrule(altrule, tokens[i:])
+                        if match: break
             elif quantifier == '*':
                 match = True
                 if item['type'] == 'string':

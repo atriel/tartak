@@ -483,6 +483,56 @@ class ParserSimpleMatchingTests(unittest.TestCase):
             self.assertTrue(result)
             self.assertEqual(['foo', 'foo', 'foo'], [i.value() for i in parser.matchrule(rule, tokens)[0]])
 
+    def testMatchingAlternatives(self):
+        string = '"foo"'
+        tokens = getDefaultLexer().feed(string).tokenize().tokens()
+        parser = tartak.parser.Parser(getDefaultLexer())
+        variants = [
+            [
+                {
+                    'type': 'alternative',
+                    'quantifier': None,
+                    'not': False,
+                    'value': [
+                        [
+                            {
+                                'type': 'identifier',
+                                'quantifier': None,
+                                'not': False,
+                                'value': ['string:triple'],
+                            },
+                        ],
+                        [
+                            {
+                                'type': 'identifier',
+                                'quantifier': None,
+                                'not': False,
+                                'value': ['string:single'],
+                            },
+                        ],
+                        [
+                            {
+                                'type': 'identifier',
+                                'quantifier': None,
+                                'not': False,
+                                'value': ['string:double'],
+                            },
+                        ]
+                    ],
+                },
+            ]
+        ]
+        for rule in variants:
+            values = []
+            result = parser.tryrule(rule, tokens)
+            if not result or DEBUG:
+                print('{0}{1}'.format(('(DEBUG) ' if DEBUG and result else ''), rule))
+            self.assertTrue(result)
+
+
+class ParserImporterTests(unittest.TestCase):
+    pass
+
 
 if __name__ == '__main__':
     unittest.main()
