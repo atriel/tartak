@@ -13,6 +13,9 @@ if '--no-path-guess' not in sys.argv:
 import tartak
 
 
+DEBUG = False
+
+
 # Helper functions
 def getDefaultLexer(string='', triple_strings=False):
     lxr = tartak.lexer.Lexer(string=string)
@@ -216,8 +219,8 @@ class LexerImporterTests(unittest.TestCase):
             self.assertEqual(lxr, tartak.lexer.Importer(string).make().lexer())
 
 
-class ParserInitialSimpleTests(unittest.TestCase):
-    def testMatchingSimpleStringLiteral(self):
+class ParserSimpleMatchingTests(unittest.TestCase):
+    def testMatchingByStringLiteral(self):
         string = '"foo"'
         tokens = getDefaultLexer().feed(string).tokenize().tokens()
         parser = tartak.parser.Parser(getDefaultLexer())
@@ -234,7 +237,7 @@ class ParserInitialSimpleTests(unittest.TestCase):
         for rule in variants:
             self.assertTrue(parser.tryrule(rule, tokens))
 
-    def testMatchingSimpleStringGroup(self):
+    def testMatchingByTokenGroup(self):
         string = '"foo"'
         tokens = getDefaultLexer().feed(string).tokenize().tokens()
         parser = tartak.parser.Parser(getDefaultLexer())
@@ -251,24 +254,7 @@ class ParserInitialSimpleTests(unittest.TestCase):
         for rule in variants:
             self.assertTrue(parser.tryrule(rule, tokens))
 
-    def testMatchingSimpleStringFullIdentifier(self):
-        string = '"foo"'
-        tokens = getDefaultLexer().feed(string).tokenize().tokens()
-        parser = tartak.parser.Parser(getDefaultLexer())
-        variants = [
-            [
-                {
-                    'type': 'identifier',
-                    'quantifier': None,
-                    'not': False,
-                    'value': ['string:double'],
-                },
-            ],
-        ]
-        for rule in variants:
-            self.assertTrue(parser.tryrule(rule, tokens))
-
-    def testMatchingSimpleStringTokenType(self):
+    def testMatchingByTokenType(self):
         string = '"foo"'
         tokens = getDefaultLexer().feed(string).tokenize().tokens()
         parser = tartak.parser.Parser(getDefaultLexer())
@@ -285,12 +271,29 @@ class ParserInitialSimpleTests(unittest.TestCase):
         for rule in variants:
             self.assertTrue(parser.tryrule(rule, tokens))
 
-    def testMatchingStringLiterals(self):
+    def testMatchingByFullTokenIdentifier(self):
+        string = '"foo"'
+        tokens = getDefaultLexer().feed(string).tokenize().tokens()
+        parser = tartak.parser.Parser(getDefaultLexer())
+        variants = [
+            [
+                {
+                    'type': 'identifier',
+                    'quantifier': None,
+                    'not': False,
+                    'value': ['string:double'],
+                },
+            ],
+        ]
+        for rule in variants:
+            self.assertTrue(parser.tryrule(rule, tokens))
+
+    def testMatchingDifferentStringLiterals(self):
         string = '"foo" \'bar\' """baz"""'
         tokens = getDefaultLexer(triple_strings=True).feed(string).tokenize().tokens()
         parser = tartak.parser.Parser(getDefaultLexer())
         variants = [
-            [
+            [ # rule no. 1, by literal values
                 {
                     'type': 'string',
                     'quantifier': None,
@@ -310,9 +313,90 @@ class ParserInitialSimpleTests(unittest.TestCase):
                     'value': ['baz'],
                 },
             ],
+            [ # rule no. 2, by token group
+                {
+                    'type': 'identifier',
+                    'quantifier': None,
+                    'not': False,
+                    'value': ['string:'],
+                },
+                {
+                    'type': 'identifier',
+                    'quantifier': None,
+                    'not': False,
+                    'value': ['string:'],
+                },
+                {
+                    'type': 'identifier',
+                    'quantifier': None,
+                    'not': False,
+                    'value': ['string:'],
+                },
+            ],
+            [ # rule no. 3, by token type
+                {
+                    'type': 'identifier',
+                    'quantifier': None,
+                    'not': False,
+                    'value': ['double'],
+                },
+                {
+                    'type': 'identifier',
+                    'quantifier': None,
+                    'not': False,
+                    'value': ['single'],
+                },
+                {
+                    'type': 'identifier',
+                    'quantifier': None,
+                    'not': False,
+                    'value': ['triple'],
+                },
+            ],
+            [ # rule no. 4, by full token identifier
+                {
+                    'type': 'identifier',
+                    'quantifier': None,
+                    'not': False,
+                    'value': ['string:double'],
+                },
+                {
+                    'type': 'identifier',
+                    'quantifier': None,
+                    'not': False,
+                    'value': ['string:single'],
+                },
+                {
+                    'type': 'identifier',
+                    'quantifier': None,
+                    'not': False,
+                    'value': ['string:triple'],
+                },
+            ],
+            [ # rule no. 5, by token group and quantifier *
+                {
+                    'type': 'identifier',
+                    'quantifier': '*',
+                    'not': False,
+                    'value': ['string:'],
+                },
+            ],
+            [ # rule no. 6, by token group and quantifier +
+                {
+                    'type': 'identifier',
+                    'quantifier': '+',
+                    'not': False,
+                    'value': ['string:'],
+                },
+            ],
         ]
         for rule in variants:
-            self.assertTrue(parser.tryrule(rule, tokens))
+            values = []
+            result = parser.tryrule(rule, tokens)
+            if not result or DEBUG:
+                print('{0}{1}'.format(('(DEBUG) ' if DEBUG and result else ''), rule))
+            self.assertTrue(result)
+            self.assertEqual(['foo', 'bar', 'baz'], [i.value() for i in parser.matchrule(rule, tokens)[0]])
 
     def testMatchingStringQuantifierPlus(self):
         string = '"foo" \'foo\' """foo"""'
@@ -327,9 +411,21 @@ class ParserInitialSimpleTests(unittest.TestCase):
                     'value': ['foo'],
                 },
             ],
+            [
+                {
+                    'type': 'identifier',
+                    'quantifier': '+',
+                    'not': False,
+                    'value': ['string:'],
+                },
+            ],
         ]
         for rule in variants:
             values = []
+            result = parser.tryrule(rule, tokens)
+            if not result or DEBUG:
+                print('{0}{1}'.format(('(DEBUG) ' if DEBUG and result else ''), rule))
+            self.assertTrue(result)
             self.assertEqual(['foo', 'foo', 'foo'], [i.value() for i in parser.matchrule(rule, tokens)[0]])
 
     def testMatchingStringQuantifierPlusRaisesErrorOnNothingFound(self):
@@ -343,6 +439,14 @@ class ParserInitialSimpleTests(unittest.TestCase):
                     'quantifier': '+',
                     'not': False,
                     'value': ['foo'],
+                },
+            ],
+            [
+                {
+                    'type': 'identifier',
+                    'quantifier': '+',
+                    'not': False,
+                    'value': ['string:'],
                 },
             ],
         ]
@@ -362,9 +466,21 @@ class ParserInitialSimpleTests(unittest.TestCase):
                     'value': ['foo'],
                 },
             ],
+            [
+                {
+                    'type': 'identifier',
+                    'quantifier': '*',
+                    'not': False,
+                    'value': ['string:'],
+                },
+            ],
         ]
         for rule in variants:
             values = []
+            result = parser.tryrule(rule, tokens)
+            if not result or DEBUG:
+                print('{0}{1}'.format(('(DEBUG) ' if DEBUG and result else ''), rule))
+            self.assertTrue(result)
             self.assertEqual(['foo', 'foo', 'foo'], [i.value() for i in parser.matchrule(rule, tokens)[0]])
 
 
