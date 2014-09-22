@@ -297,7 +297,7 @@ class ParserSimpleMatchingTests(unittest.TestCase):
             self.assertEqual(count, 1)
 
     @unittest.skip('')
-    def testMatchingDifferentStringLiterals(self):
+    def testMatchingMultitokenRules(self):
         string = '"foo" \'bar\' """baz"""'
         tokens = getDefaultLexer(triple_strings=True).feed(string).tokenize().tokens()
         parser = tartak.parser.Parser(getDefaultLexer())
