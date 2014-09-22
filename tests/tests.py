@@ -219,6 +219,62 @@ class LexerImporterTests(unittest.TestCase):
             self.assertEqual(lxr, tartak.lexer.Importer(string).make().lexer())
 
 
+class TokenStreamTests(unittest.TestCase):
+    def testPointingChangesPositionOfTheCursor(self):
+        string = '"foo" "bar" "baz" "bay" "bax"'
+        lxr = getDefaultLexer().feed(string).tokenize()
+        tokens = lxr.tokens()
+        for tok in lxr.tokens():
+            self.assertEqual(tokens[0], tok)
+            tokens.point(1)
+        self.assertEqual('foo', tokens.point(0, relative=False).get(0).value())
+
+    def testPointingChangesReportedLengthOfStream(self):
+        string = '"foo" "bar" "baz" "bay" "bax"'
+        lxr = getDefaultLexer().feed(string).tokenize()
+        tokens = lxr.tokens()
+        for i in range(len(lxr.tokens()), 0, -1):
+            self.assertEqual(i, len(tokens))
+            tokens.point(1)
+        self.assertEqual(5, len(tokens.point(0, relative=False)))
+
+    def testPointingChangesValuesReturnedByIterator(self):
+        string = '"foo" "bar" "baz" "bay" "bax"'
+        lxr = getDefaultLexer().feed(string).tokenize()
+        tokens = lxr.tokens().point(2)
+        self.assertEqual(['baz', 'bay', 'bax'], [i.value() for i in tokens])
+
+    def testPointingChangesReturnedCopy(self):
+        string = '"foo" "bar" "baz" "bay" "bax"'
+        lxr = getDefaultLexer().feed(string).tokenize()
+        tokens = lxr.tokens()
+        self.assertEqual(lxr.tokens(), tokens.copy())
+        self.assertNotEqual(lxr.tokens(), tokens.copy().point(2).copy()) # we're copying twice to avoid pointing in original tokens
+
+    def testPointingCanBeRewined(self):
+        string = '"foo" "bar" "baz" "bay" "bax"'
+        lxr = getDefaultLexer().feed(string).tokenize()
+        tokens = lxr.tokens()
+        self.assertEqual('foo', tokens.get(0).value())
+        tokens.point(1)
+        tokens.point(1)
+        tokens.point(1)
+        tokens.point(1)
+        self.assertEqual('bax', tokens.get(0).value())
+        tokens.rewind(0) # rewind to step 0
+        self.assertEqual('foo', tokens.get(0).value())
+        tokens.point(1)
+        tokens.point(1)
+        tokens.point(2)
+        self.assertEqual('bax', tokens.get(0).value())
+        tokens.rewind(-3) # rewind cursor to the position in which it was 3 .point()'s ago
+        self.assertEqual('foo', tokens.get(0).value())
+        tokens.point(4)
+        self.assertEqual('bax', tokens.get(0).value())
+        tokens.rewind(-200) # if the absolute value of a negative indexes is greater than length of the list of points, it results in rewinding the cursor to the beginning of the head
+        self.assertEqual('foo', tokens.get(0).value())
+
+
 class ParserSimpleMatchingTests(unittest.TestCase):
     def testMatchingByStringLiteral(self):
         string = '"foo"'
