@@ -246,26 +246,23 @@ class Parser:
                 #        match = Parser.tryrule(altrule, tokens[i:])
                 #        if match: break
                 if match: i += 1
-            elif quantifier == '*':
-                match = True
-                if item['type'] == 'string':
-                    while tokens and i < len(tokens) and item['value'] == tokens[i].value(): i += 1
-                elif item['type'] == 'identifier':
-                    t_group, t_type = (item['value'].split(':') if ':' in item['value'] else ('', item['value']))
-                    while tokens and i < len(tokens) and ((t_group == tokens[i].group() if t_group else True) and (t_type == tokens[i].type() if t_type else True)): i += 1
-            elif quantifier == '+':
-                if not tokens:
+            else:
+                if quantifier == '+' and not tokens:
                     raise errors.EndOfTokenStreamError('unexpected end of token stream')
                 if item['type'] == 'string':
-                    if item['value'] == tokens[i].value():
+                    if quantifier == '+' and item['value'] == tokens[i].value():
                         match = True
                         i += 1
+                    else:
+                        match = True
                     while match and tokens and i < len(tokens) and item['value'] == tokens[i].value(): i += 1
-                elif item['type'] == 'identifier':# and ':' in item['value']:
+                elif item['type'] == 'identifier':
                     t_group, t_type = (item['value'].split(':') if ':' in item['value'] else ('', item['value']))
-                    if ((t_group == tokens[i].group() if t_group else True) and (t_type == tokens[i].type() if t_type else True)):
+                    if quantifier == '+' and ((t_group == tokens[i].group() if t_group else True) and (t_type == tokens[i].type() if t_type else True)):
                         match = True
                         i += 1
+                    else:
+                        match = True
                     while match and tokens and i < len(tokens) and ((t_group == tokens[i].group() if t_group else True) and (t_type == tokens[i].type() if t_type else True)): i += 1
             if not match: break
         return (match, i)
