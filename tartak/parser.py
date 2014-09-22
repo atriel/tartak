@@ -226,44 +226,42 @@ class Parser:
         self._tokens = lexer._tokens
 
     @classmethod
+    def cellmatch(self, cell, token):
+        """Matches single cell of a rule to a token.
+        """
+        match = False
+        if cell['type'] == 'identifier':
+            t_group, t_type = (cell['value'].split(':') if ':' in cell['value'] else ('', cell['value']))
+            if (t_group == token.group() if t_group else True) and (t_type == token.type() if t_type else True):
+                match = True
+        elif cell['type'] == 'string':
+            match = (cell['value'] == token.value())
+        return match
+
+    @classmethod
     def tryrule(self, rule, tokens):
         match = False
         i = 0
         for item in rule:
             quantifier = item['quantifier']
+            if quantifier in [None, '+'] and i > len(tokens):
+                raise errors.EndOfTokenStreamError('unexpected end of token stream')
             if quantifier is None:
-                if not tokens:
-                    raise errors.EndOfTokenStreamError('unexpected end of token stream')
-                if item['type'] == 'string':
-                    match = (item['value'] == tokens[i].value())
-                elif item['type'] == 'identifier' and ':' in item['value']:
-                    t_group, t_type = item['value'].split(':')
-                    match = ((t_group == tokens[i].group()) and (t_type == tokens[i].type() if t_type else True))
-                elif item['type'] == 'identifier' and ':' not in item['value']:
-                    match = item['value'] == tokens[i].type()
+                match = Parser.cellmatch(item, tokens[i])
                 #elif item['type'] == 'alternative':
                 #    for j, altrule in enumerate(item['value']):
                 #        match = Parser.tryrule(altrule, tokens[i:])
                 #        if match: break
                 if match: i += 1
             else:
-                if quantifier == '+' and not tokens:
-                    raise errors.EndOfTokenStreamError('unexpected end of token stream')
-                if item['type'] == 'string':
-                    if quantifier == '+' and item['value'] == tokens[i].value():
-                        match = True
-                        i += 1
-                    else:
-                        match = True
-                    while match and tokens and i < len(tokens) and item['value'] == tokens[i].value(): i += 1
-                elif item['type'] == 'identifier':
-                    t_group, t_type = (item['value'].split(':') if ':' in item['value'] else ('', item['value']))
-                    if quantifier == '+' and ((t_group == tokens[i].group() if t_group else True) and (t_type == tokens[i].type() if t_type else True)):
-                        match = True
-                        i += 1
-                    else:
-                        match = True
-                    while match and tokens and i < len(tokens) and ((t_group == tokens[i].group() if t_group else True) and (t_type == tokens[i].type() if t_type else True)): i += 1
+                if quantifier in ['+', '?'] and i < len(tokens) and Parser.cellmatch(item, tokens[i]):
+                    match = True
+                    i += 1
+                elif quantifier == '+' and not Parser.cellmatch(item, tokens[i]):
+                    match = False
+                else:
+                    match = True
+                while match and quantifier != '?' and i < len(tokens) and Parser.cellmatch(item, tokens[i]): i += 1
             if not match: break
         return (match, i)
 
