@@ -13,7 +13,7 @@ if '--no-path-guess' not in sys.argv:
 import tartak
 
 
-DEBUG = True
+DEBUG = False
 
 
 # Helper functions
@@ -498,7 +498,6 @@ class ParserSimpleMatchingTests(unittest.TestCase):
             self.assertTrue(matched)
             self.assertEqual(count, 0)
 
-
     def testMatchingStringQuantifierPlus(self):
         string = '"foo" "foo"'
         tokens = getDefaultLexer(triple_strings=True).feed(string).tokenize().tokens()
@@ -569,6 +568,96 @@ class ParserSimpleMatchingTests(unittest.TestCase):
         ]
         for rule in variants:
             self.assertRaises(tartak.errors.EndOfTokenStreamError, parser.matchrule, rule, tokens)
+
+    def testMatchingQuantifierQuestionMark(self):
+        string = '"foo" "foo"'
+        tokens = getDefaultLexer(triple_strings=True).feed(string).tokenize().tokens()
+        parser = tartak.parser.Parser(getDefaultLexer())
+        variants = [
+            [
+                {
+                    'type': 'string',
+                    'quantifier': '?',
+                    'not': False,
+                    'value': 'foo',
+                },
+            ],
+            [
+                {
+                    'type': 'identifier',
+                    'quantifier': '?',
+                    'not': False,
+                    'value': 'string:',
+                },
+            ],
+            [
+                {
+                    'type': 'identifier',
+                    'quantifier': '?',
+                    'not': False,
+                    'value': 'double',
+                },
+            ],
+            [
+                {
+                    'type': 'identifier',
+                    'quantifier': '?',
+                    'not': False,
+                    'value': 'string:double',
+                },
+            ],
+        ]
+        for rule in variants:
+            matched, count = parser.tryrule(rule, tokens)
+            if not matched or DEBUG:
+                print('{0}{1}'.format(('(DEBUG) ' if DEBUG and matched else ''), rule))
+            self.assertTrue(matched)
+            self.assertEqual(count, 1)
+
+    def testMatchingQuantifierQuestionMarkMayMatchNothing(self):
+        string = ''
+        tokens = getDefaultLexer(triple_strings=True).feed(string).tokenize().tokens()
+        parser = tartak.parser.Parser(getDefaultLexer())
+        variants = [
+            [
+                {
+                    'type': 'string',
+                    'quantifier': '?',
+                    'not': False,
+                    'value': 'foo',
+                },
+            ],
+            [
+                {
+                    'type': 'identifier',
+                    'quantifier': '?',
+                    'not': False,
+                    'value': 'string:',
+                },
+            ],
+            [
+                {
+                    'type': 'identifier',
+                    'quantifier': '?',
+                    'not': False,
+                    'value': 'double',
+                },
+            ],
+            [
+                {
+                    'type': 'identifier',
+                    'quantifier': '?',
+                    'not': False,
+                    'value': 'string:double',
+                },
+            ],
+        ]
+        for rule in variants:
+            matched, count = parser.tryrule(rule, tokens)
+            if not matched or DEBUG:
+                print('{0}{1}'.format(('(DEBUG) ' if DEBUG and matched else ''), rule))
+            self.assertTrue(matched)
+            self.assertEqual(count, 0)
 
     @unittest.skip('')
     def testMatchingAlternatives(self):
