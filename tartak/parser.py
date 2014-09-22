@@ -235,7 +235,7 @@ class Parser:
                 if not tokens:
                     raise errors.EndOfTokenStreamError('unexpected end of token stream')
                 if item['type'] == 'string':
-                    match = (item['value'][0] == tokens[i].value())
+                    match = (item['value'] == tokens[i].value())
                 elif item['type'] == 'identifier' and ':' in item['value'][0]:
                     t_group, t_type = item['value'][0].split(':')
                     match = ((t_group == tokens[i].group()) and (t_type == tokens[i].type() if t_type else True))
@@ -268,7 +268,7 @@ class Parser:
                     while match and tokens and i < len(tokens) and ((t_group == tokens[i].group()) and (t_type == tokens[i].type() if t_type else True)): i += 1
             if not match: break
             i += 1
-        return match
+        return (match, i)
 
     @classmethod
     def matchrule(self, rule, tokens):
