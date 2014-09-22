@@ -236,6 +236,10 @@ class Parser:
                 match = True
         elif cell['type'] == 'string':
             match = (cell['value'] == token.value())
+        elif cell['type'] == 'alternative':
+            for a in cell['value']:
+                match = Parser.cellmatch(a, token)
+                if match: break
         return match
 
     @classmethod
@@ -247,12 +251,18 @@ class Parser:
             if quantifier in [None, '+'] and i > len(tokens):
                 raise errors.EndOfTokenStreamError('unexpected end of token stream')
             if quantifier is None:
-                match = Parser.cellmatch(item, tokens[i])
+                #if item['type'] in ['string', 'identifier']:
+                match, count = Parser.cellmatch(item, tokens[i]), 1
                 #elif item['type'] == 'alternative':
+                #    count = 0
                 #    for j, altrule in enumerate(item['value']):
-                #        match = Parser.matchrule(altrule, tokens[i:])
-                #        if match: break
-                if match: i += 1
+                #        print('trying alternative {0}'.format(j+1))
+                #        altmatch, count = Parser.matchrule([altrule], tokens.slice(i))
+                #        if altmatch:
+                #            print('matched!')
+                #            break
+                #    match = altmatch
+                if match: i += count
             else:
                 if quantifier in ['+', '?'] and i < len(tokens) and Parser.cellmatch(item, tokens[i]):
                     match = True
