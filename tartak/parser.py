@@ -257,7 +257,7 @@ class Parser:
                 if quantifier in ['+', '?'] and i < len(tokens) and Parser.cellmatch(item, tokens[i]):
                     match = True
                     i += 1
-                elif quantifier == '+' and not Parser.cellmatch(item, tokens[i]):
+                elif quantifier == '+':
                     match = False
                 else:
                     match = True

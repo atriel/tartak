@@ -275,7 +275,7 @@ class TokenStreamTests(unittest.TestCase):
         self.assertEqual('foo', tokens.get(0).value())
 
 
-class ParserSimpleMatchingTests(unittest.TestCase):
+class ParserMatchingTests(unittest.TestCase):
     def testMatchingByStringLiteral(self):
         string = '"foo"'
         tokens = getDefaultLexer().feed(string).tokenize().tokens()
@@ -507,7 +507,6 @@ class ParserSimpleMatchingTests(unittest.TestCase):
                 print('{0}{1}'.format(('(DEBUG) ' if DEBUG and matched else ''), rule))
             self.assertTrue(matched)
             self.assertEqual(count, 2)
-            #self.assertEqual(['foo', 'foo', 'foo'], [i.value() for i in parser.consumerule(rule, tokens)[0]])
 
     def testMatchingStringQuantifierStarMayMatchNothing(self):
         string = ''
@@ -599,8 +598,7 @@ class ParserSimpleMatchingTests(unittest.TestCase):
             self.assertTrue(matched)
             self.assertEqual(count, 2)
 
-    @unittest.skip('')
-    def testMatchingStringQuantifierPlusRaisesErrorOnNothingFound(self):
+    def testMatchingStringQuantifierPlusDoesNotMatchEmpty(self):
         string = ''
         tokens = getDefaultLexer(triple_strings=True).feed(string).tokenize().tokens()
         parser = tartak.parser.Parser(getDefaultLexer())
@@ -610,7 +608,7 @@ class ParserSimpleMatchingTests(unittest.TestCase):
                     'type': 'string',
                     'quantifier': '+',
                     'not': False,
-                    'value': ['foo'],
+                    'value': 'foo',
                 },
             ],
             [
@@ -618,12 +616,15 @@ class ParserSimpleMatchingTests(unittest.TestCase):
                     'type': 'identifier',
                     'quantifier': '+',
                     'not': False,
-                    'value': ['string:'],
+                    'value': 'string:',
                 },
             ],
         ]
         for rule in variants:
-            self.assertRaises(tartak.errors.EndOfTokenStreamError, parser.consumerule, rule, tokens)
+            matched, count = parser.matchrule(rule, tokens)
+            if not matched or DEBUG:
+                print('{0}{1}'.format(('(DEBUG) ' if DEBUG and matched else ''), rule))
+            self.assertFalse(matched)
 
     def testMatchingQuantifierQuestionMark(self):
         string = '"foo" "foo"'
@@ -764,7 +765,9 @@ class ParserSimpleMatchingTests(unittest.TestCase):
 
 
 class ParserImporterTests(unittest.TestCase):
-    pass
+    @unittest.skip('TODO')
+    def testImportingRule(self):
+        string = 'rule float = intege:dec? "." integer:dec ("e" ("+" | "-")? integer:dec)?; rule number = float: | integer: ; rule literal = string: | number: ;'
 
 
 if __name__ == '__main__':
