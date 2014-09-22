@@ -4,7 +4,7 @@ import json
 import sys
 import re
 
-from . import lexer, tokens
+from . import lexer, tokens, errors
 
 
 DEBUG = False
@@ -202,12 +202,6 @@ class Rule:
     def __init__(self):
         self._items = []
 
-    def append(self, item, what, quantity=''):
-        """Append item to a rule.
-        """
-        self._items.append(item)
-        return self
-
     def match(self, tokens):
         """Returns matched tokens, or None if rule does not match the beggining of token stream.
         """
@@ -231,14 +225,6 @@ class Parser:
         self._rules = {}
         self._tokens = lexer._tokens
 
-    def append(self, *args, **kwargs):
-        # TODO
-        return self
-
-    def parse(self):
-        # TODO
-        return self
-
     @classmethod
     def tryrule(self, rule, tokens):
         match = False
@@ -256,3 +242,37 @@ class Parser:
                 break
             i += 1
         return match
+
+    @classmethod
+    def matchrule(self, rule, tokens):
+        matched = []
+        for item in rule:
+            if item['quantifier'] is None:
+                if item['type'] == 'string':
+                    match = (item['value'][0] == tokens[0].value())
+                elif item['type'] == 'identifier' and ':' in item['value'][0]:
+                    t_group, t_type = item['value'][0].split(':')
+                    match = ((t_group == tokens[i].group()) and (t_type == tokens[0].type() if t_type else True))
+                elif item['type'] == 'identifier' and ':' not in item['value'][0]:
+                    match = item['value'][0] == tokens[0].type()
+                else:
+                    raise Exception('rule did not match')
+            elif item['quantifier'] == '+':
+                if not tokens:
+                    raise errors.EndOfTokenStreamError('unexpected end of token stream')
+                sub = []
+                if item['type'] == 'string':
+                    if item['value'][0] == tokens[0].value():
+                        sub.append(tokens.pop())
+                    else:
+                        raise Exception('rule did not match')
+                    while tokens and item['value'][0] == tokens[0].value():
+                        sub.append(tokens.pop())
+                matched.extend(sub)
+            elif item['quantifier'] == '*':
+                sub = []
+                if item['type'] == 'string':
+                    while tokens and item['value'][0] == tokens[0].value():
+                        sub.append(tokens.pop())
+                matched.extend(sub)
+        return (matched, tokens)
