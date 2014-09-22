@@ -59,31 +59,54 @@ class TokenStream:
         yields Token objects during iteration.
         """
         self._tokens = ([t for t in vector] if vector else [])
-        self._at = 0
+        self._head = 0
+        self._points = []
 
     def __len__(self):
-        return len(self._tokens)
+        return len(self._tokens[self._head:])
 
     def __iter__(self):
-        return iter(self._tokens)
+        return iter(self._tokens[self._head:])
 
     def __getitem__(self, n):
-        return self._tokens[n]
+        return self._tokens[self._head+n]
+
+    def __eq__(self, other):
+        if len(self) != len(other): return False
+        eq = True
+        for i, token in enumerate(other):
+            eq = token == self.get(i)
+            if not eq: break
+        return eq
 
     @classmethod
     def new(self, n=1):
         return tuple([TokenStream() for i in range(n)])
 
-    def point(self, at):
+    def point(self, at, relative=True):
         """At is an integer telling which token is to be considered *first* now.
         """
-        self._at = at
+        self._head = ((self._head+at) if relative else at)
+        self._points.append( (at-self._head) if relative else at )
+        return self
+
+    def rewind(self, n=-1):
+        """Rewinds last call to .point().
+        After a rewind point()'s after the selected index are lost, i.e. you cannot rewind a rewind.
+        """
+        if n < 0: n = len(self._points)+n
+        if n > len(self._points): raise IndexError('could not rewind to step {0}'.format(n))
+        self._head = self._points[n:][0]
+        self._points = self._points[:n]
         return self
 
     def seek(self, at):
+        return self.get(at)
+
+    def get(self, at):
         """Returns token at given index.
         """
-        return self._tokens[ (self._at+at if at >= 0 else at) ]
+        return self._tokens[ (self._head+at if at >= 0 else at) ]
 
     def append(self, token):
         """Append token to stream.
@@ -111,7 +134,7 @@ class TokenStream:
         """Return copy of current stream.
         """
         new = TokenStream()
-        for token in self: new.append(token)
+        for token in self._tokens[self._head:]: new.append(token)
         return new
 
     def dumps(self):
