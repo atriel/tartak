@@ -398,7 +398,6 @@ class Lexer:
                 token = match.replace('\\n', '\n').replace('\\\\', '\\').replace('\\t', '\t').replace('\\r', '\r')
             else:
                 token = match
-            self._char += len(match)
             if t_group == 'string':
                 if t_type in ['double', 'single']:
                     token = token[1:-1]
@@ -407,6 +406,7 @@ class Lexer:
             if t_group == 'tartak' and t_type == 'drop': continue
             self._tokens.append(Token(self._line, self._char, token, t_type, t_group))
             self._raw.append(Token(self._line, self._char, match, t_type, t_group))
+            self._char += len(match)
         return self
 
     def tokens(self, raw=False):
