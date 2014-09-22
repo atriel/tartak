@@ -13,7 +13,7 @@ if '--no-path-guess' not in sys.argv:
 import tartak
 
 
-DEBUG = False
+DEBUG = True
 
 
 # Helper functions
@@ -407,9 +407,54 @@ class ParserSimpleMatchingTests(unittest.TestCase):
             self.assertTrue(result)
             self.assertEqual(['foo', 'bar', 'baz'], [i.value() for i in parser.matchrule(rule, tokens)[0]])
 
-    @unittest.skip('')
+    def testMatchingStringQuantifierStar(self):
+        string = '"foo" "foo"'
+        tokens = getDefaultLexer(triple_strings=True).feed(string).tokenize().tokens()
+        parser = tartak.parser.Parser(getDefaultLexer())
+        variants = [
+            [
+                {
+                    'type': 'string',
+                    'quantifier': '*',
+                    'not': False,
+                    'value': 'foo',
+                },
+            ],
+            [
+                {
+                    'type': 'identifier',
+                    'quantifier': '*',
+                    'not': False,
+                    'value': 'string:',
+                },
+            ],
+            [
+                {
+                    'type': 'identifier',
+                    'quantifier': '*',
+                    'not': False,
+                    'value': 'double',
+                },
+            ],
+            [
+                {
+                    'type': 'identifier',
+                    'quantifier': '*',
+                    'not': False,
+                    'value': 'string:double',
+                },
+            ],
+        ]
+        for rule in variants:
+            matched, count = parser.tryrule(rule, tokens)
+            if not matched or DEBUG:
+                print('{0}{1}'.format(('(DEBUG) ' if DEBUG and matched else ''), rule))
+            self.assertTrue(matched)
+            self.assertEqual(count, 2)
+            #self.assertEqual(['foo', 'foo', 'foo'], [i.value() for i in parser.matchrule(rule, tokens)[0]])
+
     def testMatchingStringQuantifierPlus(self):
-        string = '"foo" \'foo\' """foo"""'
+        string = '"foo" "foo"'
         tokens = getDefaultLexer(triple_strings=True).feed(string).tokenize().tokens()
         parser = tartak.parser.Parser(getDefaultLexer())
         variants = [
@@ -418,7 +463,7 @@ class ParserSimpleMatchingTests(unittest.TestCase):
                     'type': 'string',
                     'quantifier': '+',
                     'not': False,
-                    'value': ['foo'],
+                    'value': 'foo',
                 },
             ],
             [
@@ -426,17 +471,32 @@ class ParserSimpleMatchingTests(unittest.TestCase):
                     'type': 'identifier',
                     'quantifier': '+',
                     'not': False,
-                    'value': ['string:'],
+                    'value': 'string:',
+                },
+            ],
+            [
+                {
+                    'type': 'identifier',
+                    'quantifier': '+',
+                    'not': False,
+                    'value': 'double',
+                },
+            ],
+            [
+                {
+                    'type': 'identifier',
+                    'quantifier': '+',
+                    'not': False,
+                    'value': 'string:double',
                 },
             ],
         ]
         for rule in variants:
-            values = []
-            result = parser.tryrule(rule, tokens)
-            if not result or DEBUG:
-                print('{0}{1}'.format(('(DEBUG) ' if DEBUG and result else ''), rule))
-            self.assertTrue(result)
-            self.assertEqual(['foo', 'foo', 'foo'], [i.value() for i in parser.matchrule(rule, tokens)[0]])
+            matched, count = parser.tryrule(rule, tokens)
+            if not matched or DEBUG:
+                print('{0}{1}'.format(('(DEBUG) ' if DEBUG and matched else ''), rule))
+            self.assertTrue(matched)
+            self.assertEqual(count, 2)
 
     @unittest.skip('')
     def testMatchingStringQuantifierPlusRaisesErrorOnNothingFound(self):
@@ -463,37 +523,6 @@ class ParserSimpleMatchingTests(unittest.TestCase):
         ]
         for rule in variants:
             self.assertRaises(tartak.errors.EndOfTokenStreamError, parser.matchrule, rule, tokens)
-
-    @unittest.skip('')
-    def testMatchingStringQuantifierStar(self):
-        string = '"foo" \'foo\' """foo"""'
-        tokens = getDefaultLexer(triple_strings=True).feed(string).tokenize().tokens()
-        parser = tartak.parser.Parser(getDefaultLexer())
-        variants = [
-            [
-                {
-                    'type': 'string',
-                    'quantifier': '*',
-                    'not': False,
-                    'value': ['foo'],
-                },
-            ],
-            [
-                {
-                    'type': 'identifier',
-                    'quantifier': '*',
-                    'not': False,
-                    'value': ['string:'],
-                },
-            ],
-        ]
-        for rule in variants:
-            values = []
-            result = parser.tryrule(rule, tokens)
-            if not result or DEBUG:
-                print('{0}{1}'.format(('(DEBUG) ' if DEBUG and result else ''), rule))
-            self.assertTrue(result)
-            self.assertEqual(['foo', 'foo', 'foo'], [i.value() for i in parser.matchrule(rule, tokens)[0]])
 
     @unittest.skip('')
     def testMatchingAlternatives(self):

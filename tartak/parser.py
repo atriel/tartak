@@ -241,10 +241,11 @@ class Parser:
                     match = ((t_group == tokens[i].group()) and (t_type == tokens[i].type() if t_type else True))
                 elif item['type'] == 'identifier' and ':' not in item['value']:
                     match = item['value'] == tokens[i].type()
-                elif item['type'] == 'alternative':
-                    for j, altrule in enumerate(item['value']):
-                        match = Parser.tryrule(altrule, tokens[i:])
-                        if match: break
+                #elif item['type'] == 'alternative':
+                #    for j, altrule in enumerate(item['value']):
+                #        match = Parser.tryrule(altrule, tokens[i:])
+                #        if match: break
+                if match: i += 1
             elif quantifier == '*':
                 match = True
                 if item['type'] == 'string':
@@ -252,6 +253,8 @@ class Parser:
                 elif item['type'] == 'identifier' and ':' in item['value']:
                     t_group, t_type = item['value'].split(':')
                     while tokens and i < len(tokens) and ((t_group == tokens[i].group()) and (t_type == tokens[i].type() if t_type else True)): i += 1
+                elif item['type'] == 'identifier' and ':' not in item['value']:
+                    while tokens and i < len(tokens) and item['value'] == tokens[i].type(): i += 1
             elif quantifier == '+':
                 if not tokens:
                     raise errors.EndOfTokenStreamError('unexpected end of token stream')
@@ -260,14 +263,19 @@ class Parser:
                         match = True
                         i += 1
                     while match and tokens and i < len(tokens) and item['value'] == tokens[i].value(): i += 1
-                elif item['type'] == 'identifier' and ':' in item['value'][0]:
+                elif item['type'] == 'identifier' and ':' in item['value']:
                     t_group, t_type = item['value'].split(':')
                     if ((t_group == tokens[i].group()) and (t_type == tokens[i].type() if t_type else True)):
                         match = True
                         i += 1
                     while match and tokens and i < len(tokens) and ((t_group == tokens[i].group()) and (t_type == tokens[i].type() if t_type else True)): i += 1
+                elif item['type'] == 'identifier' and ':' not in item['value']:
+                    t_type = item['value']
+                    if t_type == tokens[i].type():
+                        match = True
+                        i += 1
+                    while match and tokens and i < len(tokens) and t_type == tokens[i].type(): i += 1
             if not match: break
-            i += 1
         return (match, i)
 
     @classmethod
