@@ -108,6 +108,13 @@ class TokenStream:
         """
         return self._tokens[ (self._head+at if at >= 0 else at) ]
 
+    def slice(self, n):
+        """Returns slice of the stream.
+        """
+        stream = self.point(n).copy()
+        self.rewind()
+        return stream
+
     def append(self, token):
         """Append token to stream.
         """
