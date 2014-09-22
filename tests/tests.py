@@ -217,7 +217,7 @@ class LexerImporterTests(unittest.TestCase):
 
 
 class ParserInitialSimpleTests(unittest.TestCase):
-    def testMacthingSimpleStringLiteral(self):
+    def testMatchingSimpleStringLiteral(self):
         string = '"foo"'
         tokens = getDefaultLexer().feed(string).tokenize().tokens()
         parser = tartak.parser.Parser(getDefaultLexer())
@@ -234,7 +234,7 @@ class ParserInitialSimpleTests(unittest.TestCase):
         for rule in variants:
             self.assertTrue(parser.tryrule(rule, tokens))
 
-    def testMacthingSimpleStringGroup(self):
+    def testMatchingSimpleStringGroup(self):
         string = '"foo"'
         tokens = getDefaultLexer().feed(string).tokenize().tokens()
         parser = tartak.parser.Parser(getDefaultLexer())
@@ -251,7 +251,7 @@ class ParserInitialSimpleTests(unittest.TestCase):
         for rule in variants:
             self.assertTrue(parser.tryrule(rule, tokens))
 
-    def testMacthingSimpleStringFullIdentifier(self):
+    def testMatchingSimpleStringFullIdentifier(self):
         string = '"foo"'
         tokens = getDefaultLexer().feed(string).tokenize().tokens()
         parser = tartak.parser.Parser(getDefaultLexer())
@@ -268,7 +268,7 @@ class ParserInitialSimpleTests(unittest.TestCase):
         for rule in variants:
             self.assertTrue(parser.tryrule(rule, tokens))
 
-    def testMacthingSimpleStringTokenType(self):
+    def testMatchingSimpleStringTokenType(self):
         string = '"foo"'
         tokens = getDefaultLexer().feed(string).tokenize().tokens()
         parser = tartak.parser.Parser(getDefaultLexer())
@@ -285,8 +285,8 @@ class ParserInitialSimpleTests(unittest.TestCase):
         for rule in variants:
             self.assertTrue(parser.tryrule(rule, tokens))
 
-    def testMacthingStringLiterals(self):
-        string = '"foo" "bar" """baz"""'
+    def testMatchingStringLiterals(self):
+        string = '"foo" \'bar\' """baz"""'
         tokens = getDefaultLexer(triple_strings=True).feed(string).tokenize().tokens()
         parser = tartak.parser.Parser(getDefaultLexer())
         variants = [
@@ -313,6 +313,59 @@ class ParserInitialSimpleTests(unittest.TestCase):
         ]
         for rule in variants:
             self.assertTrue(parser.tryrule(rule, tokens))
+
+    def testMatchingStringQuantifierPlus(self):
+        string = '"foo" \'foo\' """foo"""'
+        tokens = getDefaultLexer(triple_strings=True).feed(string).tokenize().tokens()
+        parser = tartak.parser.Parser(getDefaultLexer())
+        variants = [
+            [
+                {
+                    'type': 'string',
+                    'quantifier': '+',
+                    'not': False,
+                    'value': ['foo'],
+                },
+            ],
+        ]
+        for rule in variants:
+            values = []
+            self.assertEqual(['foo', 'foo', 'foo'], [i.value() for i in parser.matchrule(rule, tokens)[0]])
+
+    def testMatchingStringQuantifierPlusRaisesErrorOnNothingFound(self):
+        string = ''
+        tokens = getDefaultLexer(triple_strings=True).feed(string).tokenize().tokens()
+        parser = tartak.parser.Parser(getDefaultLexer())
+        variants = [
+            [
+                {
+                    'type': 'string',
+                    'quantifier': '+',
+                    'not': False,
+                    'value': ['foo'],
+                },
+            ],
+        ]
+        for rule in variants:
+            self.assertRaises(tartak.errors.EndOfTokenStreamError, parser.matchrule, rule, tokens)
+
+    def testMatchingStringQuantifierStar(self):
+        string = '"foo" \'foo\' """foo"""'
+        tokens = getDefaultLexer(triple_strings=True).feed(string).tokenize().tokens()
+        parser = tartak.parser.Parser(getDefaultLexer())
+        variants = [
+            [
+                {
+                    'type': 'string',
+                    'quantifier': '*',
+                    'not': False,
+                    'value': ['foo'],
+                },
+            ],
+        ]
+        for rule in variants:
+            values = []
+            self.assertEqual(['foo', 'foo', 'foo'], [i.value() for i in parser.matchrule(rule, tokens)[0]])
 
 
 if __name__ == '__main__':
