@@ -239,7 +239,6 @@ class ParserSimpleMatchingTests(unittest.TestCase):
             self.assertTrue(matched)
             self.assertEqual(count, 1)
 
-    @unittest.skip('')
     def testMatchingByTokenGroup(self):
         string = '"foo"'
         tokens = getDefaultLexer().feed(string).tokenize().tokens()
@@ -250,14 +249,15 @@ class ParserSimpleMatchingTests(unittest.TestCase):
                     'type': 'identifier',
                     'quantifier': None,
                     'not': False,
-                    'value': ['string:'],
+                    'value': 'string:',
                 },
             ],
         ]
         for rule in variants:
-            self.assertTrue(parser.tryrule(rule, tokens))
+            matched, count = parser.tryrule(rule, tokens)
+            self.assertTrue(matched)
+            self.assertEqual(count, 1)
 
-    @unittest.skip('')
     def testMatchingByTokenType(self):
         string = '"foo"'
         tokens = getDefaultLexer().feed(string).tokenize().tokens()
@@ -268,14 +268,15 @@ class ParserSimpleMatchingTests(unittest.TestCase):
                     'type': 'identifier',
                     'quantifier': None,
                     'not': False,
-                    'value': ['double'],
+                    'value': 'double',
                 },
             ],
         ]
         for rule in variants:
-            self.assertTrue(parser.tryrule(rule, tokens))
+            matched, count = parser.tryrule(rule, tokens)
+            self.assertTrue(matched)
+            self.assertEqual(count, 1)
 
-    @unittest.skip('')
     def testMatchingByFullTokenIdentifier(self):
         string = '"foo"'
         tokens = getDefaultLexer().feed(string).tokenize().tokens()
@@ -286,12 +287,14 @@ class ParserSimpleMatchingTests(unittest.TestCase):
                     'type': 'identifier',
                     'quantifier': None,
                     'not': False,
-                    'value': ['string:double'],
+                    'value': 'string:double',
                 },
             ],
         ]
         for rule in variants:
-            self.assertTrue(parser.tryrule(rule, tokens))
+            matched, count = parser.tryrule(rule, tokens)
+            self.assertTrue(matched)
+            self.assertEqual(count, 1)
 
     @unittest.skip('')
     def testMatchingDifferentStringLiterals(self):

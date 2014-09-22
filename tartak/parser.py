@@ -236,11 +236,11 @@ class Parser:
                     raise errors.EndOfTokenStreamError('unexpected end of token stream')
                 if item['type'] == 'string':
                     match = (item['value'] == tokens[i].value())
-                elif item['type'] == 'identifier' and ':' in item['value'][0]:
-                    t_group, t_type = item['value'][0].split(':')
+                elif item['type'] == 'identifier' and ':' in item['value']:
+                    t_group, t_type = item['value'].split(':')
                     match = ((t_group == tokens[i].group()) and (t_type == tokens[i].type() if t_type else True))
-                elif item['type'] == 'identifier' and ':' not in item['value'][0]:
-                    match = item['value'][0] == tokens[i].type()
+                elif item['type'] == 'identifier' and ':' not in item['value']:
+                    match = item['value'] == tokens[i].type()
                 elif item['type'] == 'alternative':
                     for j, altrule in enumerate(item['value']):
                         match = Parser.tryrule(altrule, tokens[i:])
@@ -248,20 +248,20 @@ class Parser:
             elif quantifier == '*':
                 match = True
                 if item['type'] == 'string':
-                    while tokens and i < len(tokens) and item['value'][0] == tokens[i].value(): i += 1
+                    while tokens and i < len(tokens) and item['value'] == tokens[i].value(): i += 1
                 elif item['type'] == 'identifier' and ':' in item['value']:
-                    t_group, t_type = item['value'][i].split(':')
+                    t_group, t_type = item['value'].split(':')
                     while tokens and i < len(tokens) and ((t_group == tokens[i].group()) and (t_type == tokens[i].type() if t_type else True)): i += 1
             elif quantifier == '+':
                 if not tokens:
                     raise errors.EndOfTokenStreamError('unexpected end of token stream')
                 if item['type'] == 'string':
-                    if item['value'][0] == tokens[i].value():
+                    if item['value'] == tokens[i].value():
                         match = True
                         i += 1
-                    while match and tokens and i < len(tokens) and item['value'][0] == tokens[i].value(): i += 1
+                    while match and tokens and i < len(tokens) and item['value'] == tokens[i].value(): i += 1
                 elif item['type'] == 'identifier' and ':' in item['value'][0]:
-                    t_group, t_type = item['value'][0].split(':')
+                    t_group, t_type = item['value'].split(':')
                     if ((t_group == tokens[i].group()) and (t_type == tokens[i].type() if t_type else True)):
                         match = True
                         i += 1
