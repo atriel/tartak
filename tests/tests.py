@@ -235,7 +235,7 @@ class ParserSimpleMatchingTests(unittest.TestCase):
             ],
         ]
         for rule in variants:
-            matched, count = parser.tryrule(rule, tokens)
+            matched, count = parser.matchrule(rule, tokens)
             self.assertTrue(matched)
             self.assertEqual(count, 1)
 
@@ -254,7 +254,7 @@ class ParserSimpleMatchingTests(unittest.TestCase):
             ],
         ]
         for rule in variants:
-            matched, count = parser.tryrule(rule, tokens)
+            matched, count = parser.matchrule(rule, tokens)
             self.assertTrue(matched)
             self.assertEqual(count, 1)
 
@@ -273,7 +273,7 @@ class ParserSimpleMatchingTests(unittest.TestCase):
             ],
         ]
         for rule in variants:
-            matched, count = parser.tryrule(rule, tokens)
+            matched, count = parser.matchrule(rule, tokens)
             self.assertTrue(matched)
             self.assertEqual(count, 1)
 
@@ -292,7 +292,7 @@ class ParserSimpleMatchingTests(unittest.TestCase):
             ],
         ]
         for rule in variants:
-            matched, count = parser.tryrule(rule, tokens)
+            matched, count = parser.matchrule(rule, tokens)
             self.assertTrue(matched)
             self.assertEqual(count, 1)
 
@@ -401,11 +401,11 @@ class ParserSimpleMatchingTests(unittest.TestCase):
         ]
         for rule in variants:
             values = []
-            result = parser.tryrule(rule, tokens)
+            result = parser.matchrule(rule, tokens)
             if not result or DEBUG:
                 print('{0}{1}'.format(('(DEBUG) ' if DEBUG and result else ''), rule))
             self.assertTrue(result)
-            self.assertEqual(['foo', 'bar', 'baz'], [i.value() for i in parser.matchrule(rule, tokens)[0]])
+            self.assertEqual(['foo', 'bar', 'baz'], [i.value() for i in parser.consumerule(rule, tokens)[0]])
 
     def testMatchingStringQuantifierStar(self):
         string = '"foo" "foo"'
@@ -446,12 +446,12 @@ class ParserSimpleMatchingTests(unittest.TestCase):
             ],
         ]
         for rule in variants:
-            matched, count = parser.tryrule(rule, tokens)
+            matched, count = parser.matchrule(rule, tokens)
             if not matched or DEBUG:
                 print('{0}{1}'.format(('(DEBUG) ' if DEBUG and matched else ''), rule))
             self.assertTrue(matched)
             self.assertEqual(count, 2)
-            #self.assertEqual(['foo', 'foo', 'foo'], [i.value() for i in parser.matchrule(rule, tokens)[0]])
+            #self.assertEqual(['foo', 'foo', 'foo'], [i.value() for i in parser.consumerule(rule, tokens)[0]])
 
     def testMatchingStringQuantifierStarMayMatchNothing(self):
         string = ''
@@ -492,7 +492,7 @@ class ParserSimpleMatchingTests(unittest.TestCase):
             ],
         ]
         for rule in variants:
-            matched, count = parser.tryrule(rule, tokens)
+            matched, count = parser.matchrule(rule, tokens)
             if not matched or DEBUG:
                 print('{0}{1}'.format(('(DEBUG) ' if DEBUG and matched else ''), rule))
             self.assertTrue(matched)
@@ -537,7 +537,7 @@ class ParserSimpleMatchingTests(unittest.TestCase):
             ],
         ]
         for rule in variants:
-            matched, count = parser.tryrule(rule, tokens)
+            matched, count = parser.matchrule(rule, tokens)
             if not matched or DEBUG:
                 print('{0}{1}'.format(('(DEBUG) ' if DEBUG and matched else ''), rule))
             self.assertTrue(matched)
@@ -567,7 +567,7 @@ class ParserSimpleMatchingTests(unittest.TestCase):
             ],
         ]
         for rule in variants:
-            self.assertRaises(tartak.errors.EndOfTokenStreamError, parser.matchrule, rule, tokens)
+            self.assertRaises(tartak.errors.EndOfTokenStreamError, parser.consumerule, rule, tokens)
 
     def testMatchingQuantifierQuestionMark(self):
         string = '"foo" "foo"'
@@ -608,7 +608,7 @@ class ParserSimpleMatchingTests(unittest.TestCase):
             ],
         ]
         for rule in variants:
-            matched, count = parser.tryrule(rule, tokens)
+            matched, count = parser.matchrule(rule, tokens)
             if not matched or DEBUG:
                 print('{0}{1}'.format(('(DEBUG) ' if DEBUG and matched else ''), rule))
             self.assertTrue(matched)
@@ -653,7 +653,7 @@ class ParserSimpleMatchingTests(unittest.TestCase):
             ],
         ]
         for rule in variants:
-            matched, count = parser.tryrule(rule, tokens)
+            matched, count = parser.matchrule(rule, tokens)
             if not matched or DEBUG:
                 print('{0}{1}'.format(('(DEBUG) ' if DEBUG and matched else ''), rule))
             self.assertTrue(matched)
@@ -701,7 +701,7 @@ class ParserSimpleMatchingTests(unittest.TestCase):
         ]
         for rule in variants:
             values = []
-            result = parser.tryrule(rule, tokens)
+            result = parser.matchrule(rule, tokens)
             if not result or DEBUG:
                 print('{0}{1}'.format(('(DEBUG) ' if DEBUG and result else ''), rule))
             self.assertTrue(result)

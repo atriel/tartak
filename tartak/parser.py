@@ -239,7 +239,7 @@ class Parser:
         return match
 
     @classmethod
-    def tryrule(self, rule, tokens):
+    def matchrule(self, rule, tokens):
         match = False
         i = 0
         for item in rule:
@@ -250,7 +250,7 @@ class Parser:
                 match = Parser.cellmatch(item, tokens[i])
                 #elif item['type'] == 'alternative':
                 #    for j, altrule in enumerate(item['value']):
-                #        match = Parser.tryrule(altrule, tokens[i:])
+                #        match = Parser.matchrule(altrule, tokens[i:])
                 #        if match: break
                 if match: i += 1
             else:
@@ -266,7 +266,7 @@ class Parser:
         return (match, i)
 
     @classmethod
-    def matchrule(self, rule, tokens):
+    def consumerule(self, rule, tokens):
         matched = []
         left = tokens.copy()
         for item in rule:
