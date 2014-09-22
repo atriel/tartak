@@ -91,6 +91,11 @@ class TokenStream:
         self._tokens.append(token)
         return self
 
+    def pop(self, n=0):
+        """Pops a token at given index.
+        """
+        return self._tokens.pop(0)
+
     def remove(self, group=None, type=None):
         """Remove tokens from stream.
         """
