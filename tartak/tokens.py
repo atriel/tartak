@@ -16,7 +16,7 @@ class Token:
         return self._value
 
     def __repr__(self):
-        return '{0}{1}({2}.{3}) :: {4}'.format(self._group, self._type, self._line, self._char, self._value)
+        return '{0}:{1}({2}.{3}) :: {4}'.format(self._group, self._type, self._line, self._char, self._value)
 
     def dumps(self):
         d = {
@@ -106,6 +106,13 @@ class TokenStream:
             tokens.append(t)
         self._tokens = tokens
         return self
+
+    def copy(self):
+        """Return copy of current stream.
+        """
+        new = TokenStream()
+        for token in self: new.append(token)
+        return new
 
     def dumps(self):
         """Return list of tokens as dumped dictionaries.
