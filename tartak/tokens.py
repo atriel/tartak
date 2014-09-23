@@ -108,11 +108,15 @@ class TokenStream:
         """
         return self._tokens[ (self._head+at if at >= 0 else at) ]
 
-    def slice(self, n):
+    def slice(self, n, m=None, step=1):
         """Returns slice of the stream.
         """
-        stream = self.point(n).copy()
-        self.rewind()
+        if m is None:
+            stream = self.point(n).copy()
+            self.rewind()
+        else:
+            stream = TokenStream()
+            for i in range(n, m, step): stream.append(self.get(i))
         return stream
 
     def append(self, token):
