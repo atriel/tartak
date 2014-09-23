@@ -105,15 +105,23 @@ class Parser:
             t_group, t_type = (cell['value'].split(':') if ':' in cell['value'] else ('', cell['value']))
             if (t_group == token.group() if t_group else True) and (t_type == token.type() if t_type else True):
                 match = True
-            #print('matching by: match value: {0}:{1} == {2}:{3} ({4})'.format(t_group, t_type, token.group(), token.type(), match))
         elif cell['type'] == 'string':
             match = (cell['value'] == token.value())
-            #print('matching by: match value: {0} == {1} ({2})'.format(repr(cell['value']), repr(token.value()), match))
         elif cell['type'] == 'alternative':
             for a in cell['value']:
                 match = Parser.cellmatch(a, token)
                 if match: break
         return match
+
+    @classmethod
+    def altmatch(self, cell, stream):
+        """Matches alternatives.
+        """
+        match, count = False, 0
+        for alt in cell:
+            match, count = Parser.matchrule([alt], stream)
+            if match: break
+        return (match, count)
 
     @classmethod
     def matchrule(self, rule, tokens):
@@ -124,29 +132,34 @@ class Parser:
             if quantifier in [None, '+'] and i > len(tokens):
                 raise errors.EndOfTokenStreamError('unexpected end of token stream')
             if quantifier is None:
-                if item['type'] in ['string', 'identifier', 'alternative']:
+                if item['type'] in ['string', 'identifier']:
                     match, count = Parser.cellmatch(item, tokens[i]), 1
+                elif item['type'] == 'alternative':
+                    match, count = Parser.altmatch(item['value'], tokens.slice(i))
                 else:
                     match, count = Parser.matchrule(item['value'], tokens.slice(i))
-                #elif item['type'] == 'alternative':
-                #    count = 0
-                #    for j, altrule in enumerate(item['value']):
-                #        print('trying alternative {0}'.format(j+1))
-                #        altmatch, count = Parser.matchrule([altrule], tokens.slice(i))
-                #        if altmatch:
-                #            print('matched!')
-                #            break
-                #    match = altmatch
                 if match: i += count
             else:
-                if quantifier in ['+', '?'] and i < len(tokens) and Parser.cellmatch(item, tokens[i]):
-                    match = True
-                    i += 1
-                elif quantifier == '+':
-                    match = False
+                if item['type'] in ['string', 'identifier', 'alternative']:
+                    if quantifier in ['+', '?'] and i < len(tokens) and Parser.cellmatch(item, tokens[i]):
+                        match = True
+                        i += 1
+                    elif quantifier == '+':
+                        match = False
+                    else:
+                        match = True
+                    while match and quantifier != '?' and i < len(tokens) and Parser.cellmatch(item, tokens[i]): i += 1
                 else:
-                    match = True
-                while match and quantifier != '?' and i < len(tokens) and Parser.cellmatch(item, tokens[i]): i += 1
+                    if quantifier in ['+', '?'] and i < len(tokens) and Parser.matchrule(item['value'], tokens.slice(i))[0]:
+                        match, count = Parser.matchrule(item['value'], tokens.slice(i))
+                        i += count
+                    elif quantifier == '+':
+                        match, count = False, 0
+                    else:
+                        match, count = True, 0
+                    while match and quantifier != '?' and i < len(tokens):
+                        match, count = Parser.matchrule(item['value'], tokens.slice(i))
+                        if match: i += count
             if not match: break
         return (match, i)
 
