@@ -26,9 +26,9 @@ def getDefaultLexer(string='', triple_strings=False):
         .append(tartak.lexer.StringRule(pattern='=', name='assign', group='operator'))
         .append(tartak.lexer.StringRule(pattern=':', name='colon', group='operator'))
         .append(tartak.lexer.StringRule(pattern=';', name='semicolon', group='operator'))
-        .append(tartak.lexer.RegexRule(pattern='(0|[1-9][0-9]*)', name='dec', group='int'))
-        .append(tartak.lexer.RegexRule(pattern='0x[0-9a-fA-F]+', name='hex', group='int'))
-        .append(tartak.lexer.RegexRule(pattern='0o[0-7]+', name='oct', group='int'))
+        .append(tartak.lexer.RegexRule(pattern='(0|[1-9][0-9]*)', name='dec', group='integer'))
+        .append(tartak.lexer.RegexRule(pattern='0x[0-9a-fA-F]+', name='hex', group='integer'))
+        .append(tartak.lexer.RegexRule(pattern='0o[0-7]+', name='oct', group='integer'))
         )
     if triple_strings:
         lxr.setFlag('string-dbl-triple')
@@ -79,7 +79,7 @@ class LexerTests(unittest.TestCase):
         self.assertEqual('keyword', tokens[0].group())
         self.assertEqual('if', tokens[0].value())
         self.assertEqual('dec', tokens[1].type())
-        self.assertEqual('int', tokens[1].group())
+        self.assertEqual('integer', tokens[1].group())
         self.assertEqual('0', tokens[1].value())
         self.assertEqual('colon', tokens[2].type())
         self.assertEqual('operator', tokens[2].group())
@@ -622,7 +622,7 @@ class ParserSimpleMatchingTests(unittest.TestCase):
         ]
         for rule in variants:
             matched, count = parser.matchrule(rule, tokens)
-            if not matched or DEBUG:
+            if matched or DEBUG:
                 print('{0}{1}'.format(('(DEBUG) ' if DEBUG and matched else ''), rule))
             self.assertFalse(matched)
 
@@ -797,6 +797,53 @@ class ParserAlternativeMatchingTests(unittest.TestCase):
                 print('{0}{1}'.format(('(DEBUG) ' if DEBUG and matched else ''), rule))
             self.assertTrue(matched)
             self.assertEqual(count, 3)
+
+
+class ParserGroupMatchingTests(unittest.TestCase):
+    def testMatchingGroup(self):
+        string = 'var answer = 42;' # var leet = 1337;'
+        tokens = getDefaultLexer().feed(string).tokenize().tokens()
+        parser = tartak.parser.Parser(getDefaultLexer())
+        variants = [
+            [
+                {
+                    'type': 'group',
+                    'quantifier': None,
+                    'not': False,
+                    'value': [
+                        {
+                            'type':         'string',
+                            'quantifier':   None,
+                            'value':        'var',
+                        },
+                        {
+                            'type':         'identifier',
+                            'quantifier':   None,
+                            'value':        'name',
+                        },
+                        {
+                            'type':         'string',
+                            'quantifier':   None,
+                            'value':        '=',
+                        },
+                        {
+                            'type':         'identifier',
+                            'quantifier':   None,
+                            'value':        'integer:',
+                        },
+                        {
+                            'type':         'string',
+                            'quantifier':   None,
+                            'value':        ';',
+                        },
+                    ]
+                },
+            ],
+        ]
+        for rule in variants:
+            matched, count = parser.matchrule(rule, tokens)
+            self.assertTrue(matched)
+            self.assertEqual(count, 5)
 
 
 class ParserImporterTests(unittest.TestCase):
