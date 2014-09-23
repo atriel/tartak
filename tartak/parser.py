@@ -53,7 +53,6 @@ def _parse(tokens):
     """
     deserialised = []
     while tokens:
-        print('tokens:', tokens)
         e_type, e_mod, e_value = None, '', None
         n = 1
         t_type, value = tokens[0][1], tokens[0][-1]
@@ -89,135 +88,7 @@ def deserialize(pattern):
     return deserialised
 
 
-def match(rule, tokens):
-    """Tries to match rule to the beginning of the list of tokens and returns number of tokens matched.
-    """
-    matched, no = False, 0
-    print('rule to match:', rule)
-    origin = {}
-    origin['tokens'], origin['rule'] = tokens[:], rule[:]
-    while rule:
-        # first, get modifier and, based on it, set minimal an maximal possible occurences
-        # second, get type to know how to match patern to tokens (token? string? subpattern?)
-        # third, get the actual value of the pattern and loop over tokens with it trying to match
-        # if match cannot be found, follow to the next step of pattern or
-        # fail, if this step of the pattern must be present
-        print('rule[0]:', rule[0])
-        e_type, e_mod, e_value = rule[0]
-        if e_mod == '': min, max = 1, 1
-        elif e_mod == '?': min, max = 0, 1
-        elif e_mod == '*': min, max = 0, None
-        elif e_mod == '+': min, max = 1, None
-        else: raise SyntaxError('invalid quantifier: {0}'.format(e_mod))
-        n = 0
-        while (n < max if max is not None else True):
-            if tokens:
-                token = tokens[0]
-                print('token:', token)
-                t_type, t_value = token[1], token[-1]
-            else:
-                print('token:', None)
-                t_type, t_value = None, None
-            if t_type == e_type and t_value == e_value: pass
-            else: break
-            n += 1
-            no += 1
-            tokens = tokens[n:]
-        if n >= min and (n <= max if max is not None else True): rule = rule[1:]
-        else: break
-    if rule == []: matched = True
-    return (matched, no)
-
-
-class OldParser:
-    def __init__(self, tokens=[]):
-        self._rules, self._order = {}, []
-        self._tokens = tokens
-        self._tree = []
-
-    def addRule(self, name, pattern):
-        self._rules[name] = pattern
-        self._order.append(name)
-        return self
-
-    def _match(self, rule, tokens):
-        matched = 0
-        for p_type, mod, pattern in self._rules[rule]:
-            submatch = 0
-            if p_type == 'string':
-                token = tokens[0][2]
-                print('matching string "{0}" to token-string "{1}"'.format(pattern, token))
-                submatch = int(pattern == token)
-            elif p_type == 'token':
-                token = tokens[0][1]
-                print('matching token "{0}" to token-type "{1}"'.format(pattern, token))
-                submatch = int(pattern == token)
-            elif p_type == 'rule':
-                print('matching rule "{0}" to token sequence beginning with: {1}'.format(pattern, tokens[:4]))
-            if not submatch and mod not in ['?']: break
-            tokens = tokens[submatch:]
-            matched += 1
-        match = (matched == len(self._rules[rule]))
-        print('matched: {0}'.format(match))
-        return match
-
-    def _match2(self, rule, tokens):
-        """Tries to match rule to the beginning of the list of tokens and returns number of tokens matched.
-        """
-        matched = 0
-        i = 0
-        print(rule)
-        while i < len(rule):
-            # first, get modifier and, based on it, set minimal an maximal possible occurences
-            # second, get type to know how to match patern to tokens (token? string? subpattern?)
-            # third, get the actual value of the pattern and loop over tokens with it trying to match
-            # if match cannot be found, follow to the next step of pattern or
-            # fail, if this step of the pattern must be present
-            print('rule[i]:', rule[i])
-            e_type, e_mod, e_value = rule[i]
-            i += 1
-        return matched
-
-    def _apply(self, rule, tokens):
-        return [], 3
-
-    def parse(self):
-        self._tree = []
-        tokens = self._tokens[:]
-        while tokens:
-            match, rule = False, ''
-            for i in self._order:
-                match = self._match2(self._rules[i], tokens)
-                if match:
-                    rule = i
-                    break
-            if not match: raise Exception('unparseable (invalid?) syntax starting at line {0}: {1}'.format((tokens[0][0]+1), rebuild(getline(tokens[0][0], self._tokens))))
-            part, n = self._apply(self._rules[rule], tokens)
-            tokens = tokens[n:]
-        return self
-
-
 # New code begins here, above functions and classes SHOULD NOT be used
-class Rule:
-    def __init__(self):
-        self._items = []
-
-    def match(self, tokens):
-        """Returns matched tokens, or None if rule does not match the beggining of token stream.
-        """
-        match = None
-        # TODO: implement logic...
-        return match
-
-    def consume(self, tokens):
-        """Returns two-tuple: (matched-tokens, rest-of-token-stream).
-        Should be called after a successful call to .match() as it will modify token stream.
-        """
-        match = []
-        # TODO: implement logic...
-        tokens = tokens[len(match):]
-        return (match, tokens)
-
 
 class Parser:
     def __init__(self, lexer):
@@ -234,8 +105,10 @@ class Parser:
             t_group, t_type = (cell['value'].split(':') if ':' in cell['value'] else ('', cell['value']))
             if (t_group == token.group() if t_group else True) and (t_type == token.type() if t_type else True):
                 match = True
+            #print('matching by: match value: {0}:{1} == {2}:{3} ({4})'.format(t_group, t_type, token.group(), token.type(), match))
         elif cell['type'] == 'string':
             match = (cell['value'] == token.value())
+            #print('matching by: match value: {0} == {1} ({2})'.format(repr(cell['value']), repr(token.value()), match))
         elif cell['type'] == 'alternative':
             for a in cell['value']:
                 match = Parser.cellmatch(a, token)
@@ -251,8 +124,10 @@ class Parser:
             if quantifier in [None, '+'] and i > len(tokens):
                 raise errors.EndOfTokenStreamError('unexpected end of token stream')
             if quantifier is None:
-                #if item['type'] in ['string', 'identifier']:
-                match, count = Parser.cellmatch(item, tokens[i]), 1
+                if item['type'] in ['string', 'identifier', 'alternative']:
+                    match, count = Parser.cellmatch(item, tokens[i]), 1
+                else:
+                    match, count = Parser.matchrule(item['value'], tokens.slice(i))
                 #elif item['type'] == 'alternative':
                 #    count = 0
                 #    for j, altrule in enumerate(item['value']):
