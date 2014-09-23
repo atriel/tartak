@@ -25,6 +25,7 @@ def getDefaultLexer(string='', triple_strings=False):
         .append(tartak.lexer.StringRule(pattern='==', name='eq', group='operator'))
         .append(tartak.lexer.StringRule(pattern='=', name='assign', group='operator'))
         .append(tartak.lexer.StringRule(pattern=':', name='colon', group='operator'))
+        .append(tartak.lexer.StringRule(pattern=';', name='semicolon', group='operator'))
         .append(tartak.lexer.RegexRule(pattern='(0|[1-9][0-9]*)', name='dec', group='int'))
         .append(tartak.lexer.RegexRule(pattern='0x[0-9a-fA-F]+', name='hex', group='int'))
         .append(tartak.lexer.RegexRule(pattern='0o[0-7]+', name='oct', group='int'))
