@@ -107,10 +107,6 @@ class Parser:
                 match = True
         elif cell['type'] == 'string':
             match = (cell['value'] == token.value())
-        elif cell['type'] == 'alternative':
-            for a in cell['value']:
-                match = Parser.cellmatch(a, token)
-                if match: break
         return match
 
     @classmethod
