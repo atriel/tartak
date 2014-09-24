@@ -958,6 +958,187 @@ class ParserAlternativeMatchingTests(unittest.TestCase):
                 self.assertTrue(matched)
                 self.assertEqual(count, 4)
 
+    def testMatchingGroupAlternativeWithQuantifierStarMayMatchNothing(self):
+        strings = [
+            'nope "foo" "bar" "lorem" """ipsum"""',
+            'nope "lorem" "ipsum" """foo""" "bar"'
+        ]
+        variants = [
+            [
+                {
+                    'type': 'alternative',
+                    'quantifier': '*',
+                    'not': False,
+                    'value': [
+                        {
+                            'type': 'group',
+                            'quantifier': None,
+                            'not': False,
+                            'value': [
+                                {
+                                    'type':         'string',
+                                    'quantifier':   None,
+                                    'value':        'lorem',
+                                },
+                                {
+                                    'type':         'string',
+                                    'quantifier':   None,
+                                    'value':        'ipsum',
+                                },
+                            ]
+                        },
+                        {
+                            'type': 'group',
+                            'quantifier': None,
+                            'not': False,
+                            'value': [
+                                {
+                                    'type':         'string',
+                                    'quantifier':   None,
+                                    'value':        'foo',
+                                },
+                                {
+                                    'type':         'string',
+                                    'quantifier':   None,
+                                    'value':        'bar',
+                                },
+                            ]
+                        },
+                    ],
+                },
+            ]
+        ]
+        for string in strings:
+            tokens = getDefaultLexer(triple_strings=True).feed(string).tokenize().tokens()
+            parser = tartak.parser.Parser(getDefaultLexer())
+            for rule in variants:
+                matched, count = parser.matchrule(rule, tokens)
+                if matched or DEBUG:
+                    print('{0}{1}'.format(('(DEBUG) ' if DEBUG and matched else ''), rule))
+                self.assertFalse(matched)
+                self.assertEqual(count, 0)
+
+    def testMatchingGroupAlternativeWithQuantifierPlus(self):
+        strings = [
+            '"foo" "bar" "lorem" """ipsum"""',
+            '"lorem" "ipsum" """foo""" "bar"'
+        ]
+        variants = [
+            [
+                {
+                    'type': 'alternative',
+                    'quantifier': '+',
+                    'not': False,
+                    'value': [
+                        {
+                            'type': 'group',
+                            'quantifier': None,
+                            'not': False,
+                            'value': [
+                                {
+                                    'type':         'string',
+                                    'quantifier':   None,
+                                    'value':        'lorem',
+                                },
+                                {
+                                    'type':         'string',
+                                    'quantifier':   None,
+                                    'value':        'ipsum',
+                                },
+                            ]
+                        },
+                        {
+                            'type': 'group',
+                            'quantifier': None,
+                            'not': False,
+                            'value': [
+                                {
+                                    'type':         'string',
+                                    'quantifier':   None,
+                                    'value':        'foo',
+                                },
+                                {
+                                    'type':         'string',
+                                    'quantifier':   None,
+                                    'value':        'bar',
+                                },
+                            ]
+                        },
+                    ],
+                },
+            ]
+        ]
+        for string in strings:
+            tokens = getDefaultLexer(triple_strings=True).feed(string).tokenize().tokens()
+            parser = tartak.parser.Parser(getDefaultLexer())
+            for rule in variants:
+                matched, count = parser.matchrule(rule, tokens)
+                if not matched or DEBUG:
+                    print('{0}{1}'.format(('(DEBUG) ' if DEBUG and matched else ''), rule))
+                self.assertTrue(matched)
+                self.assertEqual(count, 4)
+
+    def testMatchingGroupAlternativeWithQuantifierPlusMayNotMatchNothing(self):
+        strings = [
+            'nope "foo" "bar" "lorem" """ipsum"""',
+            'nope "lorem" "ipsum" """foo""" "bar"'
+        ]
+        variants = [
+            [
+                {
+                    'type': 'alternative',
+                    'quantifier': '+',
+                    'not': False,
+                    'value': [
+                        {
+                            'type': 'group',
+                            'quantifier': None,
+                            'not': False,
+                            'value': [
+                                {
+                                    'type':         'string',
+                                    'quantifier':   None,
+                                    'value':        'lorem',
+                                },
+                                {
+                                    'type':         'string',
+                                    'quantifier':   None,
+                                    'value':        'ipsum',
+                                },
+                            ]
+                        },
+                        {
+                            'type': 'group',
+                            'quantifier': None,
+                            'not': False,
+                            'value': [
+                                {
+                                    'type':         'string',
+                                    'quantifier':   None,
+                                    'value':        'foo',
+                                },
+                                {
+                                    'type':         'string',
+                                    'quantifier':   None,
+                                    'value':        'bar',
+                                },
+                            ]
+                        },
+                    ],
+                },
+            ]
+        ]
+        for string in strings:
+            tokens = getDefaultLexer(triple_strings=True).feed(string).tokenize().tokens()
+            parser = tartak.parser.Parser(getDefaultLexer())
+            for rule in variants:
+                matched, count = parser.matchrule(rule, tokens)
+                if matched or DEBUG:
+                    print('{0}{1}'.format(('(DEBUG) ' if DEBUG and matched else ''), rule))
+                self.assertFalse(matched)
+                self.assertEqual(count, 0)
+
+
 class ParserGroupMatchingTests(unittest.TestCase):
     def testMatchingGroup(self):
         string = 'var answer = 42;' # var leet = 1337;'
