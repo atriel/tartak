@@ -140,7 +140,7 @@ class Parser:
                     match, count = Parser.matchrule(item['value'], tokens.slice(i))
                 if match: i += count
             else:
-                if item['type'] in ['string', 'identifier', 'alternative']:
+                if item['type'] in ['string', 'identifier']:
                     if quantifier in ['+', '?'] and i < len(tokens) and Parser.cellmatch(item, tokens[i]):
                         match = True
                         i += 1
@@ -149,6 +149,17 @@ class Parser:
                     else:
                         match = True
                     while match and quantifier != '?' and i < len(tokens) and Parser.cellmatch(item, tokens[i]): i += 1
+                elif item['type'] == 'alternative':
+                    if quantifier in ['+', '?'] and i < len(tokens) and Parser.altmatch(item['value'], tokens.slice(i))[0]:
+                        match, count = Parser.altmatch(item['value'], tokens.slice(i))
+                    elif quantifier == '+':
+                        match, count = False, 0
+                    else:
+                        match, count = True, 0
+                    if match: i += count
+                    while match and quantifier != '?' and i < len(tokens):
+                        match, count = Parser.altmatch(item['value'], tokens.slice(i))
+                        if match: i += count
                 else:
                     if quantifier in ['+', '?'] and i < len(tokens) and Parser.matchrule(item['value'], tokens.slice(i))[0]:
                         match, count = Parser.matchrule(item['value'], tokens.slice(i))
