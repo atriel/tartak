@@ -62,6 +62,9 @@ class TokenStream:
         self._head = 0
         self._points = []
 
+    def __bool__(self):
+        return len(self) > 0
+
     def __len__(self):
         return len(self._tokens[self._head:])
 
