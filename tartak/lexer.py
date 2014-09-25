@@ -3,7 +3,7 @@
 import re
 import warnings
 
-from .errors import LexerError, EmptyRuleError, ParserError
+from .errors import LexerError, EmptyRuleError, ParserError, TartakSyntaxError
 from .tokens import Token, TokenStream
 
 
@@ -131,78 +131,150 @@ class Importer:
                     .append(RegexRule(group='comment', name='line', pattern='#.*'))
          )
 
-    def make(self):
-        """Makes lexer from string.
+    def parse(self):
+        """Parses tokens into rules.
         """
+        from .parser import Parser
         self._makelex()
-        self._made = Lexer()
-        tokens = self._lexer.feed(self._string).tokenize().tokens().remove(group='comment')
-        rules = []
-        flags = []
+        parser = Parser(self._lexer)
+        rule_token = [
+            {
+                'type':         'group',
+                'value': [
+                    {
+                        'type':         'string',
+                        'value':        'token',
+                    },
+                    {
+                        'type':         'alternative',
+                        'value': [
+                            {
+                                'type': 'string',
+                                'value': 'string',
+                            },
+                            {
+                                'type': 'string',
+                                'value': 'regex',
+                            },
+                        ]
+                    },
+                    {
+                        'type': 'identifier',
+                        'value': 'name:name',
+                    },
+                    {
+                        'type': 'group',
+                        'quantifier': '?',
+                        'value': [
+                            {
+                                'type': 'string',
+                                'value': ':',
+                            },
+                            {
+                                'type': 'identifier',
+                                'value': 'name:name',
+                            }
+                        ]
+                    },
+                    {
+                        'type': 'string',
+                        'value': '=',
+                    },
+                    {
+                        'type': 'identifier',
+                        'value': 'string:',
+                    },
+                    {
+                        'type': 'string',
+                        'value': ';',
+                    }
+                ]
+            }
+        ]
+        rule_flag = [
+            {
+                'type': 'group',
+                'value': [
+                    {
+                        'type':         'string',
+                        'value':        'flag',
+                        'quantifier':   None,
+                    },
+                    {
+                        'type': 'identifier',
+                        'quantifier': None,
+                        'value': 'name:name',
+                    },
+                    {
+                        'type': 'string',
+                        'quantifier': None,
+                        'value': '=',
+                    },
+                    {
+                        'type': 'alternative',
+                        'value': [
+                            {
+                                'type': 'identifier',
+                                'value': 'string:',
+                            },
+                            {
+                                'type': 'identifier',
+                                'value': 'bool:',
+                            },
+                        ]
+                    },
+                    {
+                        'type': 'string',
+                        'quantifier': None,
+                        'value': ';',
+                    }
+                ]
+            }
+        ]
+        orig = self._lexer.feed(self._string).tokenize().tokens().remove(group='comment')
+        tokens = orig.copy()
+        matches = []
         i = 0
-        while i < len(tokens):
-            token = tokens[i]
-            if token.type() == 'token':
-                t_group, t_name, t_class, t_pattern = None, None, None, None
-                if i+1 < len(tokens) and tokens[i+1].type() in ['string', 'regex']:
-                    if i+2 < len(tokens) and tokens[i+2].type() == 'name':
-                        if i+3 < len(tokens) and tokens[i+3].type() == 'colon':
-                            if i+4 < len(tokens) and tokens[i+4].type() == 'name':
-                                if i+5 < len(tokens) and tokens[i+5].type() == 'assign':
-                                    if i+6 < len(tokens) and tokens[i+6].group() == 'string':
-                                        if i+7 < len(tokens) and tokens[i+7].type() == 'semicolon':
-                                            t_group = tokens[i+2].value()
-                                            t_name = tokens[i+4].value()
-                                            t_class = tokens[i+1].value()
-                                            t_pattern = tokens[i+6]
-                                            i += 7
-                        elif i+3 < len(tokens) and tokens[i+3].type() == 'assign':
-                            if i+4 < len(tokens) and tokens[i+4].group() == 'string':
-                                if i+5 < len(tokens) and tokens[i+5].type() == 'semicolon':
-                                    t_group = tokens[i+2].value()
-                                    t_name = tokens[i+2].value()
-                                    t_class = tokens[i+1].value()
-                                    t_pattern = tokens[i+4]
-                                    i += 5
-                if t_class is None:
-                    msg = 'invalid syntax: starting on line {0}, character {1}\n'.format(token.line(), token.char())
-                    msg += self._lexer.getline(token.line(), rebuild=True)
-                    msg += '\n'
-                    msg += '-'*token.char() + '^'
-                    raise ParserError(msg)
-                else:
-                    t_pattern = t_pattern.value()
-                    rule = (StringRule if t_class == 'string' else RegexRule)(pattern=t_pattern, name=t_name, group=t_group)
-                    rules.append(rule)
-            elif token.type() == 'flag':
-                flag, value = None, None
-                if tokens[i+1].type() == 'name':
-                    if tokens[i+2].type() == 'assign' and tokens[i+2].group() == 'operator':
-                        if tokens[i+3].group() in ['bool', 'string']:
-                            if tokens[i+4].type() == 'semicolon':
-                                flag = tokens[i+1].value().replace('_', '-')
-                                if tokens[i+3].value() == 'true': value = True
-                                elif tokens[i+3].value() == 'false': value = False
-                                else:
-                                    value = tokens[i+3].value()
-                                i += 4
-                if flag is None:
-                    msg = 'invalid syntax: starting on line {0}, character {1}\n'.format(token.line(), token.char())
-                    msg += self._lexer.getline(token.line(), rebuild=True)
-                    msg += '\n'
-                    msg += '-'*token.char() + '^'
-                    raise ParserError(msg)
-                else:
-                    flags.append( (flag, value) )
+        while tokens:
+            match, count = Parser.matchrule(rule_flag, tokens)
+            if not match:
+                match, count = Parser.matchrule(rule_token, tokens)
+            if match:
+                matched = tokens.slice(0, count)
+                i += count
+                tokens = tokens.slice(count)
+                matches.append(matched)
             else:
-                msg = 'invalid syntax: starting on line {0}, character {1}\n'.format(token.line(), token.char())
-                msg += self._lexer.getline(token.line(), rebuild=True)
-                msg += '\n'
-                msg += '-'*token.char() + '^'
-                raise ParserError(msg)
-            i += 1
-        for rule in rules: self._made.append(rule)
-        for flag, value in flags: self._made.setFlag(flag, value)
+                line, char = orig.get(i+count-1).line(), orig.get(i+count-1).char()
+                msg =  'syntax error on line {0}, character {1}: '.format(line, char)
+                msg += 'unexpected token type: "{0}:{1}"\n\n'.format(orig.get(i+count-1).group(), orig.get(i+count-1).type())
+                msg += '{0}\n'.format(self._lexer.getline(line, rebuild=True).rstrip())
+                msg += '{0}^'.format('-'*char)
+                raise TartakSyntaxError(msg)
+        self._made = Lexer()
+        for m in matches:
+            if m[0].value() == 'token':
+                m = m.slice(1)
+                if m[0].value() == 'string': token_rule_type = StringRule
+                else: token_rule_type = RegexRule
+                m = m.slice(1)
+                if len(m) == 6:
+                    t_group = m[0].value()
+                    m = m.slice(2)
+                    t_type = m[0].value()
+                else:
+                    t_group = m[0].value()
+                    t_type = m[0].value()
+                m = m.slice(2)
+                pattern = m[0].value()
+                self._made.append(token_rule_type(pattern=pattern, name=t_type, group=t_group))
+            elif m[0].value() == 'flag':
+                m = m.slice(1)
+                flag = m[0].value().replace('_', '-')
+                m = m.slice(2)
+                value = m[0].value()
+                if m[0].group() == 'bool': value = (True if value == 'true' else False)
+                self._made.setFlag(flag, value)
         return self
 
     def lexer(self):
