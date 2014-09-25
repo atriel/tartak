@@ -116,6 +116,8 @@ class Importer:
         return self
 
     def _makelex(self):
+        """Create a lexer for .lexer files.
+        """
         self._lexer = Lexer()
         (self._lexer.append(StringRule(group='keyword', name='token', pattern='token'))
                     .append(StringRule(group='keyword', name='flag', pattern='flag'))
@@ -135,8 +137,6 @@ class Importer:
         """Parses tokens into rules.
         """
         from .parser import Parser
-        self._makelex()
-        parser = Parser(self._lexer)
         rule_token = [
             {
                 'type':         'group',
@@ -231,28 +231,16 @@ class Importer:
                 ]
             }
         ]
+        self._makelex()
+        parser = Parser(self._lexer)
+        (parser.append('token_decl', rule_token)
+               .append('flag_decl', rule_flag)
+               )
         orig = self._lexer.feed(self._string).tokenize().tokens().remove(group='comment')
-        tokens = orig.copy()
-        matches = []
-        i = 0
-        while tokens:
-            match, count = Parser.matchrule(rule_flag, tokens)
-            if not match:
-                match, count = Parser.matchrule(rule_token, tokens)
-            if match:
-                matched = tokens.slice(0, count)
-                i += count
-                tokens = tokens.slice(count)
-                matches.append(matched)
-            else:
-                line, char = orig.get(i+count-1).line(), orig.get(i+count-1).char()
-                msg =  'syntax error on line {0}, character {1}: '.format(line, char)
-                msg += 'unexpected token type: "{0}:{1}"\n\n'.format(orig.get(i+count-1).group(), orig.get(i+count-1).type())
-                msg += '{0}\n'.format(self._lexer.getline(line, rebuild=True).rstrip())
-                msg += '{0}^'.format('-'*char)
-                raise TartakSyntaxError(msg)
+        parser.feed(orig)
+        parser.feed(self._lexer.tokens(raw=True), raw=True)
         self._made = Lexer()
-        for m in matches:
+        for m in parser.parse():
             if m[0].value() == 'token':
                 m = m.slice(1)
                 if m[0].value() == 'string': token_rule_type = StringRule
@@ -278,8 +266,9 @@ class Importer:
         return self
 
     def lexer(self):
+        """Return parsed lexer or None if not yet parsed.
+        """
         return self._made
-
 
 
 # Lexer
