@@ -92,9 +92,9 @@ def deserialize(pattern):
 
 class Parser:
     def __init__(self, lexer):
-        self._lexrules = lexer._rules
-        self._rules = {}
-        self._tokens = lexer._tokens
+        self._lexer = lexer
+        self._rules = []
+        self._tokens, self._rawtoks = None, None
 
     @classmethod
     def cellmatch(self, cell, token):
@@ -211,3 +211,42 @@ class Parser:
                     while left and ((t_group == left[0].group()) and (t_type == left[0].type() if t_type else True)): sub.append(left.pop())
                 matched.extend(sub)
         return (matched, left)
+
+    def append(self, name, rule):
+        """Append new rule to the parser.
+        """
+        self._rules.append( (name, rule) )
+        return self
+
+    def feed(self, stream, raw=False):
+        """Feed token stream to parser.
+        """
+        if not raw: self._tokens = stream
+        else: self._rawtoks = stream
+        return self
+
+    def parse(self):
+        """Parse token stream.
+        """
+        tree = []
+        tstream = self._tokens.copy()
+        i = 0
+        while tstream:
+            match = False
+            for name, rule in self._rules:
+                match, count = Parser.matchrule(rule, tstream)
+                if not match: continue
+                matched = tstream.slice(0, count)
+                i += count
+                tstream = tstream.slice(count)
+                tree.append(matched)
+                break
+            if not match:
+                orig = self._tokens.get(i+count-1)
+                line, char = orig.line(), orig.char()
+                msg =  'syntax error on line {0}, character {1}: '.format(line, char)
+                msg += 'unexpected token type: "{0}:{1}"\n\n'.format(orig.group(), orig.type())
+                msg += '{0}\n'.format(self._lexer.getline(line, rebuild=True).rstrip())
+                msg += '{0}^'.format('-'*char)
+                raise errors.TartakSyntaxError(msg)
+        return tree
