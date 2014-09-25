@@ -1,0 +1,75 @@
+flag string_sgl_triple = false;
+flag string_dbl_triple = true;
+flag newline = "\n";
+
+token regex comment = "^#.*";
+
+token string backslash = "\\";
+
+token string keyword:import = "import";
+token string keyword:from   = "from";
+token string keyword:as     = "as";
+token string keyword:if     = "if";
+token string keyword:elif   = "elif";
+token string keyword:else   = "else";
+token string keyword:def    = "def";
+token string keyword:class  = "class";
+token string keyword:while  = "while";
+token string keyword:for    = "for";
+token string keyword:return = "return";
+token string keyword:yield  = "yield";
+token string keyword:break  = "break";
+token string keyword:continue = "continue";
+token string keyword:lambda = "lambda";
+token string keyword:raise  = "raise";
+token string keyword:try    = "try";
+token string keyword:except = "except";
+token string keyword:finally = "finally";
+token string keyword:with   = "with";
+
+token string operator:eq = "==";
+token string operator:noteq = "!=";
+token string operator:lte = "<=";
+token string operator:lt = "<";
+token string operator:gte = ">=";
+token string operator:gt = ">";
+
+token string operator:setplus = "+=";
+token string operator:setminus = "-=";
+token string operator:setmul = "*=";
+token string operator:setdiv = "/=";
+token string operator:setmod = "%=";
+
+token string operator:log_or = "or";
+token string operator:log_and = "and";
+token string operator:log_not = "not";
+
+token string operator:dot       = ".";
+token string operator:comma     = ",";
+token string operator:assign    = "=";
+token string operator:colon     = ":";
+token string operator:semicolon = ";";
+token string operator:plus      = "+";
+token string operator:minus     = "-";
+token string operator:pow       = "**";
+token string operator:mul       = "*";
+token string operator:div       = "/";
+token string operator:mod       = "%";
+token string operator:at        = "@";
+
+# what does these operators exactly do?
+token string operator:caret     = "^";
+token string operator:amper     = "&";
+token string operator:pipe      = "|";
+
+
+token string paren:lparen       = "(";
+token string paren:rparen       = ")";
+token string bracket:lsquare    = "[";
+token string bracket:rsquare    = "]";
+token string bracket:lcurly     = "{";
+token string bracket:rcurly     = "}";
+
+
+token regex name = "[a-zA-Z_][a-zA-Z0-9_]*";
+token regex integer:dec = "(0|[1-9][0-9]*)";
