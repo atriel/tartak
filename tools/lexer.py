@@ -276,7 +276,16 @@ else:
         print('fatal: {0} does not point to a file and does not name a predefined set'.format(repr(LEXER_RULES)))
         exit(3)
     with open(LEXER_RULES, 'r') as ifstream:
-        lexer = tartak.lexer.Importer().feed(ifstream.read()).make().lexer()
+        try:
+            lexer, msg = tartak.lexer.Importer().feed(ifstream.read()).parse().lexer(), None
+        except tartak.errors.TartakSyntaxError as e:
+            lexer, msg = None, str(e)
+        finally:
+            if lexer is None:
+                print('error while processing file: {0}'.format(repr(LEXER_RULES)))
+                print(msg)
+                exit(2)
+
 try:
     with open(INPUT, 'r') as ifstream: string = ifstream.read()
     lexer.feed(string).tokenize(errors=ERRORS)
