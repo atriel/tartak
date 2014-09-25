@@ -16,5 +16,10 @@ class EmptyRuleError(LexerError):
 class ParserError(TartakError):
     pass
 
+
+class TartakSyntaxError(ParserError):
+    pass
+
+
 class EndOfTokenStreamError(ParserError):
     pass
