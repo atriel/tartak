@@ -124,7 +124,7 @@ class Parser:
         match = False
         i = 0
         for item in rule:
-            quantifier = item['quantifier']
+            quantifier = item.get('quantifier')
             if quantifier in [None, '+'] and i > len(tokens):
                 raise errors.EndOfTokenStreamError('unexpected end of token stream')
             if quantifier is None:
@@ -134,7 +134,7 @@ class Parser:
                     match, count = Parser.altmatch(item['value'], tokens.slice(i))
                 else:
                     match, count = Parser.matchrule(item['value'], tokens.slice(i))
-                if match: i += count
+                i += count
             else:
                 if item['type'] in ['string', 'identifier']:
                     if quantifier in ['+', '?'] and i < len(tokens) and Parser.cellmatch(item, tokens[i]):
