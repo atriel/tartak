@@ -1,0 +1,10 @@
+## Fixes:
+
+- [lexer]: reporting position on broken strings: char offset is not right,
+- [parser]: reporting syntax errors,
+
+
+
+## Features:
+
+- [parser]: importing parsers from file (translating BNF grammars to rules),
